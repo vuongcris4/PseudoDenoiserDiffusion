@@ -2,7 +2,7 @@
 # Uses OEMCISCRCrossEntropyDataset with split files (train.txt, val.txt, test.txt).
 
 dataset_type = 'OEMCISCRCrossEntropyDataset'
-data_root = 'diffusion_denoiser/datasets/OEM_v2_aDanh'
+data_root = 'data/OEM_v2_aDanh'
 num_classes = 7
 
 img_size = 512
@@ -31,3 +31,9 @@ data = dict(
         img_size=img_size,
         augment=False,
         num_classes=num_classes))
+
+# W&B logging config
+wandb = dict(
+    project='pseudo-denoiser-d3pm',
+    name='oem_ciscr_crossentropy'
+)

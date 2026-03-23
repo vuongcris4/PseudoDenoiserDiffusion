@@ -6,3 +6,9 @@ _base_ = [
 ]
 
 data = dict(samples_per_gpu=4, workers_per_gpu=4)
+
+# W&B logging config
+wandb = dict(
+    project='pseudo-denoiser-d3pm',
+    name='d3pm_concat_uniform_512x512_100k'
+)

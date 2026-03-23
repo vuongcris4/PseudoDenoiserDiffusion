@@ -33,6 +33,12 @@ from mmcv.utils import Config
 from diffusion_denoiser.models.diffusion_denoiser import DiffusionDenoiserModel
 from diffusion_denoiser.datasets.pseudo_label_dataset import PseudoLabelDiffusionDataset
 
+try:
+    import wandb
+    HAS_WANDB = True
+except ImportError:
+    HAS_WANDB = False
+
 
 class EMA:
     """Exponential Moving Average of model parameters."""
@@ -136,6 +142,15 @@ def main():
             osp.splitext(osp.basename(args.config))[0])
     if rank == 0:
         os.makedirs(work_dir, exist_ok=True)
+
+    # W&B init
+    if rank == 0 and HAS_WANDB:
+        wandb_cfg = cfg.get('wandb', dict(project='pseudo-denoiser-d3pm'))
+        wandb.init(
+            project=wandb_cfg.get('project', 'pseudo-denoiser-d3pm'),
+            name=wandb_cfg.get('name', osp.splitext(osp.basename(args.config))[0]),
+            config=cfg.to_dict(),
+            dir=work_dir)
 
     # Seed
     torch.manual_seed(args.seed)
@@ -252,6 +267,13 @@ def main():
                 f'{k}: {v.item():.4f}' for k, v in losses.items())
             print(f'[Iter {iteration + 1}/{max_iters}] {loss_str} | lr: {lr:.2e}')
 
+            # W&B log
+            if HAS_WANDB:
+                log_dict = {k: v.item() for k, v in losses.items()}
+                log_dict['learning_rate'] = lr
+                log_dict['iteration'] = iteration + 1
+                wandb.log(log_dict)
+
         # Checkpoint
         if rank == 0 and (iteration + 1) % ckpt_interval == 0:
             ckpt_path = osp.join(work_dir, f'iter_{iteration + 1}.pth')
@@ -280,11 +302,30 @@ def main():
             print(f'[Eval @ Iter {iteration + 1}] mIoU: {miou:.4f}')
             print(f'  Per-class: {np.array2string(per_class_iou, precision=4)}')
 
+            # W&B log evaluation metrics
+            if HAS_WANDB:
+                wandb.log({
+                    'val/mIoU': miou,
+                    'val/per_class_iou': wandb.Histogram(per_class_iou.tolist()),
+                    'iteration': iteration + 1
+                })
+                # Save per-class IoU as table
+                class_names = [f'Class_{i}' for i in range(len(per_class_iou))]
+                wandb.log({
+                    'val/iou_table': wandb.Table(
+                        columns=['Class', 'IoU'],
+                        data=list(zip(class_names, per_class_iou.tolist()))
+                    ),
+                    'iteration': iteration + 1
+                })
+
             if ema:
                 ema.restore(raw_model, backup)
 
     if rank == 0:
         print('Training complete.')
+        if HAS_WANDB:
+            wandb.finish()
 
 
 if __name__ == '__main__':
