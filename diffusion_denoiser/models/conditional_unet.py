@@ -692,15 +692,21 @@ class ConditionalUNet(nn.Module):
         # ---- Encoder ----
         self.encoder_blocks = nn.ModuleList()
         self.encoder_downsamples = nn.ModuleList()
-        enc_channels = [channels[0]]  # Track skip connection channels
+        enc_channels = []  # Track skip connection channels
 
         for level in range(self.num_resolutions):
             ch = channels[level]
-            ch_in = enc_channels[-1] if level > 0 else channels[0]
 
             level_blocks = nn.ModuleList()
             for i in range(num_res_blocks):
-                block_in = ch_in if i == 0 else ch
+                # First block of each level receives input from:
+                # - level 0: input_conv output (channels[0])
+                # - level > 0: downsample from previous level (channels[level-1])
+                # Subsequent blocks receive output from previous block (ch)
+                if i == 0:
+                    block_in = channels[0] if level == 0 else channels[level - 1]
+                else:
+                    block_in = ch
                 level_blocks.append(ResBlock(block_in, ch, t_dim, dropout))
 
                 # Self-attention at specified resolutions
@@ -714,12 +720,11 @@ class ConditionalUNet(nn.Module):
                         CrossAttention(ch, cond_enc_channels[level]))
 
             self.encoder_blocks.append(level_blocks)
-            enc_channels.append(ch)
+            enc_channels.append(ch)  # Push once per level for skip connection
 
             # Downsample (except last level)
             if level < self.num_resolutions - 1:
                 self.encoder_downsamples.append(Downsample(ch))
-                enc_channels.append(ch)
             else:
                 self.encoder_downsamples.append(nn.Identity())
 
@@ -737,36 +742,42 @@ class ConditionalUNet(nn.Module):
         # ---- Decoder ----
         self.decoder_blocks = nn.ModuleList()
         self.decoder_upsamples = nn.ModuleList()
+        self.decoder_projections = nn.ModuleList()
+
+        # Decoder forward iterates: for level_idx, level in enumerate(reversed(range(num_resolutions)))
+        # So we store decoder items in the same order as forward will iterate
+        # decoder_items[0] = highest level (level N-1), decoder_items[N-1] = lowest level (level 0)
 
         for level in reversed(range(self.num_resolutions)):
             ch = channels[level]
 
             level_blocks = nn.ModuleList()
-            for i in range(num_res_blocks + 1):  # +1 for skip connection
-                # Skip connection doubles channels
-                skip_ch = enc_channels.pop()
-                block_in = ch + skip_ch if i == 0 else ch
-                if i > 0:
-                    block_in = ch
-                else:
-                    block_in = skip_ch + (channels[level + 1] if level < self.num_resolutions - 1 else mid_ch)
 
-                level_blocks.append(ResBlock(block_in, ch, t_dim, dropout))
+            # Projection
+            prev_ch = mid_ch if level == self.num_resolutions - 1 else channels[level + 1]
+            proj = nn.Conv2d(prev_ch, ch, 1) if prev_ch != ch else nn.Identity()
+            self.decoder_projections.append(proj)
 
-                ds_factor = 2 ** level
-                if ds_factor in attn_resolutions:
-                    level_blocks.append(SelfAttention(ch))
+            skip_ch = enc_channels.pop()
+            level_blocks.append(ResBlock(ch + skip_ch, ch, t_dim, dropout))
 
-                if cond_type in ('crossattn', 'hybrid') and ds_factor in attn_resolutions:
-                    level_blocks.append(
-                        CrossAttention(ch, cond_enc_channels[level]))
+            # Additional res blocks
+            for i in range(num_res_blocks - 1):
+                level_blocks.append(ResBlock(ch, ch, t_dim, dropout))
+
+            # Attention
+            ds_factor = 2 ** level
+            if ds_factor in attn_resolutions:
+                level_blocks.append(SelfAttention(ch))
+
+            if cond_type in ('crossattn', 'hybrid') and ds_factor in attn_resolutions:
+                level_blocks.append(
+                    CrossAttention(ch, cond_enc_channels[level]))
 
             self.decoder_blocks.append(level_blocks)
 
-            if level > 0:
-                self.decoder_upsamples.append(Upsample(ch))
-            else:
-                self.decoder_upsamples.append(nn.Identity())
+            upsample = Upsample(ch) if level > 0 else nn.Identity()
+            self.decoder_upsamples.append(upsample)
 
         # Output projection
         self.out_norm = nn.GroupNorm(min(32, channels[0]), channels[0])
@@ -805,7 +816,7 @@ class ConditionalUNet(nn.Module):
         h = self.input_conv(h)
 
         # ---- Encoder ----
-        skips = [h]
+        skips = []
         for level in range(self.num_resolutions):
             blocks = self.encoder_blocks[level]
             for block in blocks:
@@ -819,7 +830,6 @@ class ConditionalUNet(nn.Module):
 
             if level < self.num_resolutions - 1:
                 h = self.encoder_downsamples[level](h)
-                skips.append(h)
 
         # ---- Bottleneck ----
         h = self.mid_block1(h, t_emb)
@@ -831,6 +841,9 @@ class ConditionalUNet(nn.Module):
         # ---- Decoder ----
         for level_idx, level in enumerate(
                 reversed(range(self.num_resolutions))):
+            # Project h to match current level channels
+            h = self.decoder_projections[level_idx](h)
+
             blocks = self.decoder_blocks[level_idx]
             for i, block in enumerate(blocks):
                 if isinstance(block, ResBlock):

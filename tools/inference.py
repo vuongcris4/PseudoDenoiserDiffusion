@@ -16,7 +16,7 @@ import os
 import os.path as osp
 import sys
 
-import mmcv
+import cv2
 import numpy as np
 import torch
 from PIL import Image
@@ -24,7 +24,7 @@ from tqdm import tqdm
 
 sys.path.insert(0, osp.join(osp.dirname(__file__), '..'))
 
-from mmcv.utils import Config
+from diffusion_denoiser.utils.config import Config
 from diffusion_denoiser.models.diffusion_denoiser import DiffusionDenoiserModel
 
 
@@ -87,7 +87,7 @@ def main():
 
     for img_file in tqdm(img_files, desc='Denoising'):
         # Load satellite image
-        img = mmcv.imread(osp.join(args.img_dir, img_file)).astype(np.float32)
+        img = cv2.imread(osp.join(args.img_dir, img_file)).astype(np.float32)
         img = (img - mean) / std
         img = img.transpose(2, 0, 1)  # (3, H, W)
         img_t = torch.from_numpy(img).unsqueeze(0).float().to(args.device)
@@ -98,7 +98,7 @@ def main():
         if not osp.exists(pseudo_path):
             print(f'Warning: {pseudo_file} not found, skipping.')
             continue
-        pseudo = mmcv.imread(pseudo_path, flag='unchanged')
+        pseudo = cv2.imread(pseudo_path, cv2.IMREAD_UNCHANGED)
         if pseudo.ndim == 3:
             pseudo = pseudo[:, :, 0]
         pseudo_t = torch.from_numpy(pseudo.astype(np.int64)).unsqueeze(0).to(args.device)

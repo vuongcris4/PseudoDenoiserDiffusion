@@ -12,7 +12,7 @@ import os
 import os.path as osp
 from typing import Dict, List, Optional, Tuple
 
-import mmcv
+import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -79,15 +79,15 @@ class PseudoLabelDiffusionDataset(Dataset):
         label_fname = fname.replace(self.img_suffix, self.label_suffix)
 
         # Load satellite image (BGR → float32)
-        img = mmcv.imread(osp.join(self.img_dir, fname)).astype(np.float32)
+        img = cv2.imread(osp.join(self.img_dir, fname)).astype(np.float32)
 
         # Load pseudo-label and clean label
-        pseudo = mmcv.imread(
+        pseudo = cv2.imread(
             osp.join(self.pseudo_label_dir, label_fname),
-            flag='unchanged')
-        clean = mmcv.imread(
+            cv2.IMREAD_UNCHANGED)
+        clean = cv2.imread(
             osp.join(self.ann_dir, label_fname),
-            flag='unchanged')
+            cv2.IMREAD_UNCHANGED)
 
         if pseudo.ndim == 3:
             pseudo = pseudo[:, :, 0]

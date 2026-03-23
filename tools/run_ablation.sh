@@ -63,7 +63,7 @@ TRAIN_SCRIPT="${PROJECT_DIR}/tools/train.py"
 TEST_SCRIPT="${PROJECT_DIR}/tools/test.py"
 
 # ========================== Experiment matrix ==============================
-# 3 conditioning strategies × 2 noise types = 6 experiments
+# 3 conditioning × 2 noise types = 6 base + 3 pretrained backbone = 9 experiments
 CONFIGS=(
     "d3pm_concat_uniform_512x512_100k"
     "d3pm_concat_absorbing_512x512_100k"
@@ -71,16 +71,22 @@ CONFIGS=(
     "d3pm_crossattn_absorbing_512x512_100k"
     "d3pm_hybrid_uniform_512x512_100k"
     "d3pm_hybrid_absorbing_512x512_100k"
+    "d3pm_crossattn_uniform_segformer_512x512_100k"
+    "d3pm_crossattn_absorbing_resnet50_512x512_100k"
+    "d3pm_hybrid_uniform_resnet101_512x512_100k"
 )
 
 # Human-readable labels for the results table
 declare -A LABELS=(
-    ["d3pm_concat_uniform_512x512_100k"]="Concat   | Uniform"
-    ["d3pm_concat_absorbing_512x512_100k"]="Concat   | Absorbing"
-    ["d3pm_crossattn_uniform_512x512_100k"]="CrossAttn| Uniform"
-    ["d3pm_crossattn_absorbing_512x512_100k"]="CrossAttn| Absorbing"
-    ["d3pm_hybrid_uniform_512x512_100k"]="Hybrid   | Uniform"
-    ["d3pm_hybrid_absorbing_512x512_100k"]="Hybrid   | Absorbing"
+    ["d3pm_concat_uniform_512x512_100k"]="Concat    | Uniform   | UNet"
+    ["d3pm_concat_absorbing_512x512_100k"]="Concat    | Absorbing | UNet"
+    ["d3pm_crossattn_uniform_512x512_100k"]="CrossAttn | Uniform   | UNet"
+    ["d3pm_crossattn_absorbing_512x512_100k"]="CrossAttn | Absorbing | UNet"
+    ["d3pm_hybrid_uniform_512x512_100k"]="Hybrid    | Uniform   | UNet"
+    ["d3pm_hybrid_absorbing_512x512_100k"]="Hybrid    | Absorbing | UNet"
+    ["d3pm_crossattn_uniform_segformer_512x512_100k"]="CrossAttn | Uniform   | SegFormer-B2"
+    ["d3pm_crossattn_absorbing_resnet50_512x512_100k"]="CrossAttn | Absorbing | ResNet-50"
+    ["d3pm_hybrid_uniform_resnet101_512x512_100k"]="Hybrid    | Uniform   | ResNet-101"
 )
 
 # ========================== Utility functions ===============================
@@ -200,10 +206,10 @@ aggregate_results() {
 
     # Header
     local header
-    header=$(printf "%-22s | %-10s | %-12s | %-12s | %-8s" \
-             "Conditioning" "Noise" "Pseudo mIoU" "Denoised mIoU" "Δ mIoU")
+    header=$(printf "%-12s | %-10s | %-14s | %-12s | %-14s | %-8s" \
+             "Conditioning" "Noise" "Backbone" "Pseudo mIoU" "Denoised mIoU" "Δ mIoU")
     local separator
-    separator=$(printf '%0.s-' {1..76})
+    separator=$(printf '%0.s-' {1..90})
 
     {
         echo "============================================================"
@@ -217,21 +223,22 @@ aggregate_results() {
     } > "$results_file"
 
     # CSV header
-    echo "config,conditioning,noise,pseudo_miou,denoised_miou,delta_miou" > "$results_csv"
+    echo "config,conditioning,noise,backbone,pseudo_miou,denoised_miou,delta_miou" > "$results_csv"
 
     for config_name in "${CONFIGS[@]}"; do
         local eval_log="${WORK_DIR}/${config_name}/eval_steps${EVAL_STEPS}.log"
         local label="${LABELS[$config_name]}"
 
         # Parse conditioning and noise from label
-        local cond noise
+        local cond noise backbone
         cond=$(echo "$label" | cut -d'|' -f1 | xargs)
         noise=$(echo "$label" | cut -d'|' -f2 | xargs)
+        backbone=$(echo "$label" | cut -d'|' -f3 | xargs)
 
         if [[ ! -f "$eval_log" ]]; then
-            printf "%-22s | %-10s | %-12s | %-12s | %-8s\n" \
-                "$cond" "$noise" "N/A" "N/A" "N/A" >> "$results_file"
-            echo "${config_name},${cond},${noise},,,," >> "$results_csv"
+            printf "%-12s | %-10s | %-14s | %-12s | %-14s | %-8s\n" \
+                "$cond" "$noise" "$backbone" "N/A" "N/A" "N/A" >> "$results_file"
+            echo "${config_name},${cond},${noise},${backbone},,,," >> "$results_csv"
             continue
         fi
 
@@ -246,16 +253,16 @@ aggregate_results() {
             denoised_miou=$(echo "$miou_line" | awk '{print $3}')
             delta_miou=$(echo "$miou_line" | awk '{print $4}')
 
-            printf "%-22s | %-10s | %-12s | %-12s | %-8s\n" \
-                "$cond" "$noise" "$pseudo_miou" "$denoised_miou" "$delta_miou" \
+            printf "%-12s | %-10s | %-14s | %-12s | %-14s | %-8s\n" \
+                "$cond" "$noise" "$backbone" "$pseudo_miou" "$denoised_miou" "$delta_miou" \
                 >> "$results_file"
-            echo "${config_name},${cond},${noise},${pseudo_miou},${denoised_miou},${delta_miou}" \
+            echo "${config_name},${cond},${noise},${backbone},${pseudo_miou},${denoised_miou},${delta_miou}" \
                 >> "$results_csv"
         else
-            printf "%-22s | %-10s | %-12s | %-12s | %-8s\n" \
-                "$cond" "$noise" "PARSE_ERR" "PARSE_ERR" "PARSE_ERR" \
+            printf "%-12s | %-10s | %-14s | %-12s | %-14s | %-8s\n" \
+                "$cond" "$noise" "$backbone" "PARSE_ERR" "PARSE_ERR" "PARSE_ERR" \
                 >> "$results_file"
-            echo "${config_name},${cond},${noise},,,," >> "$results_csv"
+            echo "${config_name},${cond},${noise},${backbone},,,," >> "$results_csv"
         fi
     done
 

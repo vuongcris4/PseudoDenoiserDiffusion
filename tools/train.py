@@ -29,15 +29,22 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 sys.path.insert(0, osp.join(osp.dirname(__file__), '..'))
 
-from mmcv.utils import Config
+from diffusion_denoiser.utils.config import Config
 from diffusion_denoiser.models.diffusion_denoiser import DiffusionDenoiserModel
 from diffusion_denoiser.datasets.pseudo_label_dataset import PseudoLabelDiffusionDataset
+from diffusion_denoiser.datasets.oem_ciscr_dataset import OEMCISCRCrossEntropyDataset
 
 try:
     import wandb
     HAS_WANDB = True
 except ImportError:
     HAS_WANDB = False
+
+# Registry for dataset classes
+DATASET_REGISTRY = {
+    'PseudoLabelDiffusionDataset': PseudoLabelDiffusionDataset,
+    'OEMCISCRCrossEntropyDataset': OEMCISCRCrossEntropyDataset,
+}
 
 
 class EMA:
@@ -74,6 +81,8 @@ def parse_args():
     parser.add_argument('--work-dir', help='Working directory')
     parser.add_argument('--resume-from', help='Checkpoint to resume from')
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--cfg-options', nargs='+', action='store', default=[],
+                        help='Override config settings. key=value pairs')
     parser.add_argument('--launcher', choices=['none', 'pytorch'],
                         default='none')
     parser.add_argument('--local_rank', type=int, default=0)
@@ -88,17 +97,38 @@ def build_model(cfg) -> DiffusionDenoiserModel:
 
 
 def build_dataset(data_cfg, is_train=True):
-    """Build dataset from config dict."""
+    """Build dataset from config dict, dispatching to correct dataset class."""
     dataset_cfg = data_cfg.copy()
-    dataset_cfg.pop('type', None)
-    return PseudoLabelDiffusionDataset(**dataset_cfg)
+    dataset_type = dataset_cfg.pop('type', 'OEMCISCRCrossEntropyDataset')
+
+    if dataset_type in DATASET_REGISTRY:
+        cls = DATASET_REGISTRY[dataset_type]
+    else:
+        raise ValueError(f'Unknown dataset type: {dataset_type}. '
+                         f'Available: {list(DATASET_REGISTRY.keys())}')
+    return cls(**dataset_cfg)
 
 
 def evaluate(model, val_loader, device, num_steps=10):
-    """Evaluate by denoising validation pseudo-labels and computing mIoU."""
+    """Evaluate by denoising validation pseudo-labels and computing mIoU.
+
+    Returns:
+        dict with keys:
+            miou_pred: mIoU of denoised output vs clean label
+            miou_pseudo: mIoU of raw pseudo-label vs clean label (baseline)
+            miou_delta: improvement (miou_pred - miou_pseudo)
+            per_class_iou_pred: per-class IoU of denoised output
+            per_class_iou_pseudo: per-class IoU of pseudo-labels
+    """
     model.eval()
-    intersection = torch.zeros(model.num_classes, device=device)
-    union = torch.zeros(model.num_classes, device=device)
+    num_classes = model.num_classes
+
+    # Accumulators for denoised prediction
+    inter_pred = torch.zeros(num_classes, device=device)
+    union_pred = torch.zeros(num_classes, device=device)
+    # Accumulators for pseudo-label baseline
+    inter_pseudo = torch.zeros(num_classes, device=device)
+    union_pseudo = torch.zeros(num_classes, device=device)
 
     for batch in val_loader:
         satellite = batch['satellite_img'].to(device)
@@ -108,22 +138,50 @@ def evaluate(model, val_loader, device, num_steps=10):
         # Denoise with reduced steps for speed
         pred = model.denoise(satellite, pseudo, num_steps=num_steps)
 
-        # Compute per-class IoU
-        for c in range(model.num_classes):
+        # Compute per-class IoU for denoised output
+        for c in range(num_classes):
             pred_c = (pred == c)
+            pseudo_c = (pseudo == c)
             gt_c = (clean == c)
-            intersection[c] += (pred_c & gt_c).sum()
-            union[c] += (pred_c | gt_c).sum()
 
-    iou = intersection / (union + 1e-10)
-    miou = iou.mean().item()
+            inter_pred[c] += (pred_c & gt_c).sum()
+            union_pred[c] += (pred_c | gt_c).sum()
+
+            inter_pseudo[c] += (pseudo_c & gt_c).sum()
+            union_pseudo[c] += (pseudo_c | gt_c).sum()
+
+    iou_pred = inter_pred / (union_pred + 1e-10)
+    iou_pseudo = inter_pseudo / (union_pseudo + 1e-10)
+
+    miou_pred = iou_pred.mean().item()
+    miou_pseudo = iou_pseudo.mean().item()
+    miou_delta = miou_pred - miou_pseudo
+
     model.train()
-    return miou, iou.cpu().numpy()
+    return dict(
+        miou_pred=miou_pred,
+        miou_pseudo=miou_pseudo,
+        miou_delta=miou_delta,
+        per_class_iou_pred=iou_pred.cpu().numpy(),
+        per_class_iou_pseudo=iou_pseudo.cpu().numpy(),
+    )
 
 
 def main():
     args = parse_args()
     cfg = Config.fromfile(args.config)
+
+    # Apply --cfg-options overrides (key=value pairs)
+    if args.cfg_options:
+        for opt in args.cfg_options:
+            if '=' in opt:
+                key, val = opt.split('=', 1)
+                # Try to evaluate the value (int, float, etc.)
+                try:
+                    val = eval(val)
+                except:
+                    pass
+                cfg.merge_from_dict({key: val})
 
     # Setup distributed
     distributed = args.launcher != 'none'
@@ -143,14 +201,76 @@ def main():
     if rank == 0:
         os.makedirs(work_dir, exist_ok=True)
 
-    # W&B init
+    # W&B init with full experiment metadata
+    global HAS_WANDB  # may be reassigned in except block below
     if rank == 0 and HAS_WANDB:
         wandb_cfg = cfg.get('wandb', dict(project='pseudo-denoiser-d3pm'))
-        wandb.init(
-            project=wandb_cfg.get('project', 'pseudo-denoiser-d3pm'),
-            name=wandb_cfg.get('name', osp.splitext(osp.basename(args.config))[0]),
-            config=cfg.to_dict(),
-            dir=work_dir)
+
+        # Build comprehensive experiment config
+        full_config = {
+            # Model architecture
+            'model': cfg.get('model', {}),
+            # Dataset settings
+            'dataset': {
+                'type': cfg.data.get('type', 'OEMCISCRCrossEntropyDataset'),
+                'data_root': cfg.data.get('data_root', 'data/OEM_v2_aDanh'),
+                'num_classes': cfg.get('num_classes', 7),
+                'img_size': cfg.get('img_size', 512),
+                'samples_per_gpu': cfg.data.get('samples_per_gpu', 1),
+                'workers_per_gpu': cfg.data.get('workers_per_gpu', 4),
+            },
+            # Training settings
+            'training': {
+                'max_iters': cfg.get('max_iters', 100000),
+                'optimizer': cfg.get('optimizer', {}),
+                'lr_scheduler': cfg.get('lr_scheduler', {}),
+                'ema': {
+                    'use_ema': cfg.get('use_ema', True),
+                    'ema_decay': cfg.get('ema_decay', 0.9999),
+                },
+            },
+            # Runtime settings
+            'runtime': {
+                'seed': args.seed,
+                'checkpoint_interval': cfg.get('checkpoint_interval', 5000),
+                'eval_interval': cfg.get('eval_interval', 10000),
+                'log_interval': cfg.get('log_interval', 50),
+            },
+            # Diffusion specific
+            'diffusion': {
+                'num_timesteps': cfg.model.get('num_timesteps', 100),
+                'transition_type': cfg.model.get('transition_type', 'uniform'),
+                'beta_schedule': cfg.model.get('beta_schedule', 'cosine'),
+                'loss_type': cfg.model.get('loss_type', 'hybrid'),
+                'hybrid_lambda': cfg.model.get('hybrid_lambda', 0.01),
+            },
+            # UNet architecture
+            'unet': {
+                'base_channels': cfg.model.get('base_channels', 128),
+                'channel_mult': cfg.model.get('channel_mult', (1, 2, 4, 8)),
+                'num_res_blocks': cfg.model.get('num_res_blocks', 2),
+                'attn_resolutions': cfg.model.get('attn_resolutions', (2, 4)),
+                'cond_type': cfg.model.get('cond_type', 'concat'),
+                'dropout': cfg.model.get('dropout', 0.1),
+            },
+        }
+
+        try:
+            wandb.init(
+                project=wandb_cfg.get('project', 'pseudo-denoiser-d3pm'),
+                name=wandb_cfg.get('name', osp.splitext(osp.basename(args.config))[0]),
+                config=full_config,
+                dir=work_dir)
+
+            # Log additional run metadata
+            wandb.run.tags = [
+                cfg.model.get('cond_type', 'concat'),
+                cfg.model.get('transition_type', 'uniform'),
+                f"bs{cfg.data.get('samples_per_gpu', 1)}",
+            ]
+        except Exception as e:
+            print(f'Warning: W&B init failed ({e}). Training without W&B logging.')
+            HAS_WANDB = False
 
     # Seed
     torch.manual_seed(args.seed)
@@ -280,9 +400,15 @@ def main():
             save_dict = dict(
                 model=raw_model.state_dict(),
                 optimizer=optimizer.state_dict(),
-                iter=iteration + 1)
+                iter=iteration + 1,
+                config_path=args.config)
             if ema:
                 save_dict['ema'] = ema.shadow
+            # Save W&B run info so test.py can resume the same run
+            if HAS_WANDB and wandb.run is not None:
+                save_dict['wandb_run_id'] = wandb.run.id
+                save_dict['wandb_project'] = wandb.run.project
+                save_dict['wandb_entity'] = wandb.run.entity
             torch.save(save_dict, ckpt_path)
             # Symlink latest
             latest = osp.join(work_dir, 'latest.pth')
@@ -298,23 +424,41 @@ def main():
                 backup = {k: v.data.clone() for k, v in raw_model.named_parameters()}
                 ema.apply(raw_model)
 
-            miou, per_class_iou = evaluate(raw_model, val_loader, device)
-            print(f'[Eval @ Iter {iteration + 1}] mIoU: {miou:.4f}')
-            print(f'  Per-class: {np.array2string(per_class_iou, precision=4)}')
+            eval_results = evaluate(raw_model, val_loader, device)
+            miou_pred = eval_results['miou_pred']
+            miou_pseudo = eval_results['miou_pseudo']
+            miou_delta = eval_results['miou_delta']
+            per_class_pred = eval_results['per_class_iou_pred']
+            per_class_pseudo = eval_results['per_class_iou_pseudo']
+
+            sign = '+' if miou_delta >= 0 else ''
+            print(f'[Eval @ Iter {iteration + 1}]')
+            print(f'  Pseudo-label mIoU (baseline): {miou_pseudo:.4f}')
+            print(f'  Output mIoU (denoised):       {miou_pred:.4f}')
+            print(f'  Improved mIoU (Δ):            {sign}{miou_delta:.4f}')
+            print(f'  Per-class (pred):   {np.array2string(per_class_pred, precision=4)}')
+            print(f'  Per-class (pseudo): {np.array2string(per_class_pseudo, precision=4)}')
 
             # W&B log evaluation metrics
             if HAS_WANDB:
                 wandb.log({
-                    'val/mIoU': miou,
-                    'val/per_class_iou': wandb.Histogram(per_class_iou.tolist()),
+                    'val/mIoU_pseudo': miou_pseudo,
+                    'val/mIoU_output': miou_pred,
+                    'val/mIoU_improved': miou_delta,
                     'iteration': iteration + 1
                 })
                 # Save per-class IoU as table
-                class_names = [f'Class_{i}' for i in range(len(per_class_iou))]
+                num_c = len(per_class_pred)
+                class_names = [f'Class_{i}' for i in range(num_c)]
                 wandb.log({
                     'val/iou_table': wandb.Table(
-                        columns=['Class', 'IoU'],
-                        data=list(zip(class_names, per_class_iou.tolist()))
+                        columns=['Class', 'IoU_Pseudo', 'IoU_Denoised', 'Δ'],
+                        data=[
+                            [class_names[i], per_class_pseudo[i],
+                             per_class_pred[i],
+                             per_class_pred[i] - per_class_pseudo[i]]
+                            for i in range(num_c)
+                        ]
                     ),
                     'iteration': iteration + 1
                 })
@@ -324,6 +468,41 @@ def main():
 
     if rank == 0:
         print('Training complete.')
+
+        # ── Auto-run final evaluation with visualization ────────────────
+        print('\n' + '=' * 60)
+        print('Running final evaluation with visualization...')
+        print('=' * 60)
+        latest_ckpt = osp.join(work_dir, 'latest.pth')
+        if osp.exists(latest_ckpt):
+            try:
+                from tools.test import (
+                    run_evaluation, colorize_mask, denormalize_satellite,
+                    create_overlay, create_diff_map, CLASS_NAMES
+                )
+                # Apply EMA for final eval
+                if ema:
+                    backup = {k: v.data.clone()
+                              for k, v in raw_model.named_parameters()}
+                    ema.apply(raw_model)
+
+                run_evaluation(
+                    model=raw_model,
+                    cfg=cfg,
+                    device=device,
+                    checkpoint_path=latest_ckpt,
+                    use_wandb=(HAS_WANDB and wandb.run is not None),
+                )
+
+                if ema:
+                    ema.restore(raw_model, backup)
+            except Exception as e:
+                print(f'Warning: Auto-evaluation failed: {e}')
+                import traceback
+                traceback.print_exc()
+        else:
+            print(f'No checkpoint found at {latest_ckpt}, skipping eval.')
+
         if HAS_WANDB:
             wandb.finish()
 

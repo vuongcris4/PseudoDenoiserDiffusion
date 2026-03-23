@@ -9,9 +9,10 @@ lr_scheduler = dict(
     min_lr=1e-6)
 
 max_iters = 100000
-checkpoint_interval = 10000
+# checkpoint_interval and log_interval are defined in default_runtime.py
+# checkpoint_interval = 10000
 eval_interval = 10000
-log_interval = 100
+# log_interval = 100
 
 # EMA for stable training
 use_ema = True

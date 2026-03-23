@@ -40,6 +40,9 @@ Thumbs.db
 # Project data (large datasets)
 data/
 diffusion_denoiser/datasets/OEM_v2_aDanh/
+**/data/**
+*.npy
+*.npz
 
 # Working directories
 work_dirs/

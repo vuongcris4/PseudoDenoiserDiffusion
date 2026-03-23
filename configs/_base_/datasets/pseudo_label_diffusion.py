@@ -1,15 +1,11 @@
 # Dataset config for D3PM pseudo-label denoising.
-# Same directory structure as MMsegDenoiser.
+# Uses OEMCISCRCrossEntropyDataset with split files (train.txt, val.txt, test.txt).
 
-dataset_type = 'PseudoLabelDiffusionDataset'
-data_root = 'data/my_dataset'
+dataset_type = 'OEMCISCRCrossEntropyDataset'
+data_root = 'data/OEM_v2_aDanh'
 num_classes = 7
 
-img_norm_cfg = dict(
-    mean=[123.675, 116.28, 103.53],
-    std=[58.395, 57.12, 57.375])
-
-crop_size = (512, 512)
+img_size = 512
 
 data = dict(
     samples_per_gpu=4,
@@ -17,36 +13,21 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        img_dir='images/train',
-        ann_dir='clean_labels/train',
-        pseudo_label_dir='pseudo_labels/train',
-        num_classes=num_classes,
-        crop_size=crop_size,
-        img_suffix='.tif',
-        label_suffix='.png',
-        img_norm_cfg=img_norm_cfg,
-        is_train=True),
+        split='train',
+        img_size=img_size,
+        augment=True,
+        num_classes=num_classes),
     val=dict(
         type=dataset_type,
         data_root=data_root,
-        img_dir='images/val',
-        ann_dir='clean_labels/val',
-        pseudo_label_dir='pseudo_labels/val',
-        num_classes=num_classes,
-        crop_size=crop_size,
-        img_suffix='.tif',
-        label_suffix='.png',
-        img_norm_cfg=img_norm_cfg,
-        is_train=False),
+        split='val',
+        img_size=img_size,
+        augment=False,
+        num_classes=num_classes),
     test=dict(
         type=dataset_type,
         data_root=data_root,
-        img_dir='images/val',
-        ann_dir='clean_labels/val',
-        pseudo_label_dir='pseudo_labels/val',
-        num_classes=num_classes,
-        crop_size=crop_size,
-        img_suffix='.tif',
-        label_suffix='.png',
-        img_norm_cfg=img_norm_cfg,
-        is_train=False))
+        split='test',
+        img_size=img_size,
+        augment=False,
+        num_classes=num_classes))
