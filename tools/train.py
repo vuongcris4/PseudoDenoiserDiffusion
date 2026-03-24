@@ -1,8 +1,9 @@
 """Training script for D3PM discrete diffusion pseudo-label denoiser.
 
 Usage:
-    # Single GPU
-    python tools/train.py configs/denoiser/d3pm_concat_uniform_512x512_100k.py
+    # Single GPU (epoch-based)
+    python tools/train.py configs/denoiser/d3pm_concat_uniform_512x512_100k.py \
+        --cfg-options max_epochs=30
 
     # Multi-GPU
     torchrun --nproc_per_node=4 tools/train.py \
@@ -10,7 +11,7 @@ Usage:
 
     # Resume
     python tools/train.py configs/denoiser/d3pm_concat_uniform_512x512_100k.py \
-        --resume-from work_dirs/d3pm_concat_uniform/latest.pth
+        --resume-from work_dirs/d3pm_concat_uniform/epoch_10.pth
 """
 
 import argparse
@@ -223,7 +224,8 @@ def main():
             },
             # Training settings
             'training': {
-                'max_iters': cfg.get('max_iters', 100000),
+                'max_epochs': cfg.get('max_epochs', 100),
+                'max_iters': cfg.get('max_iters', None),
                 'optimizer': cfg.get('optimizer', {}),
                 'lr_scheduler': cfg.get('lr_scheduler', {}),
                 'ema': {
@@ -234,8 +236,8 @@ def main():
             # Runtime settings
             'runtime': {
                 'seed': args.seed,
-                'checkpoint_interval': cfg.get('checkpoint_interval', 5000),
-                'eval_interval': cfg.get('eval_interval', 10000),
+                'ckpt_epoch_interval': cfg.get('ckpt_epoch_interval', 1),
+                'eval_epoch_interval': cfg.get('eval_epoch_interval', 1),
                 'log_interval': cfg.get('log_interval', 50),
             },
             # Diffusion specific
@@ -321,7 +323,24 @@ def main():
         weight_decay=opt_cfg.get('weight_decay', 0.01))
 
     # LR scheduler
-    max_iters = cfg.get('max_iters', 100000)
+    max_epochs = cfg.get('max_epochs', None)
+    max_iters = cfg.get('max_iters', None)
+
+    # Compute training length
+    import math
+    iters_per_epoch = math.ceil(len(train_dataset) / cfg.data.samples_per_gpu)
+
+    if max_epochs is not None:
+        max_iters = max_epochs * iters_per_epoch
+        print(f'Training for {max_epochs} epochs ({max_iters} iterations, {iters_per_epoch} iters/epoch)')
+    elif max_iters is not None:
+        max_epochs = math.ceil(max_iters / iters_per_epoch)
+        print(f'Training for {max_iters} iterations (~{max_epochs} epochs, {iters_per_epoch} iters/epoch)')
+    else:
+        max_epochs = 100
+        max_iters = max_epochs * iters_per_epoch
+        print(f'Using default: {max_epochs} epochs ({max_iters} iterations)')
+
     warmup_iters = cfg.get('lr_scheduler', {}).get('warmup_iters', 5000)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=max_iters - warmup_iters, eta_min=1e-6)
@@ -362,40 +381,45 @@ def main():
     # Training loop
     model.train()
     data_iter = iter(train_loader)
-    log_interval = cfg.get('log_interval', 100)
-    ckpt_interval = cfg.get('checkpoint_interval', 10000)
-    eval_interval = cfg.get('eval_interval', 10000)
+    log_interval = cfg.get('log_interval', 50)
 
-    # Epoch tracking
-    import math
-    iters_per_epoch = math.ceil(len(train_dataset) / cfg.data.samples_per_gpu)
-    current_epoch = start_iter // iters_per_epoch
-    eval_every_n_epochs = cfg.get('eval_epoch_interval', 1)
-    ckpt_every_n_epochs = cfg.get('ckpt_epoch_interval', 1)
+    # Epoch-based intervals (preferred)
+    ckpt_epoch_interval = cfg.get('ckpt_epoch_interval', 1)
+    eval_epoch_interval = cfg.get('eval_epoch_interval', 1)
+
+    # Fallback to iteration-based if epoch-based not set
+    ckpt_interval = cfg.get('checkpoint_interval', None)
+    eval_interval = cfg.get('eval_interval', None)
 
     if rank == 0:
-        print(f'Starting training for {max_iters} iterations '
-              f'(~{max_iters / iters_per_epoch:.0f} epochs, '
-              f'{iters_per_epoch} iters/epoch)...')
+        print(f'\nCheckpoint: every {ckpt_epoch_interval} epoch(s)')
+        print(f'Evaluation: every {eval_epoch_interval} epoch(s)')
+        print(f'Logging: every {log_interval} iterations\n')
+
+    # Epoch tracking
+    start_epoch = start_iter // iters_per_epoch
+    current_epoch = start_epoch
+
+    if rank == 0:
+        print(f'Starting training from epoch {current_epoch + 1}...')
         print(f'Model: {cfg.model.type}, cond: {cfg.model.cond_type}, '
               f'noise: {cfg.model.transition_type}')
-        print(f'Eval every {eval_every_n_epochs} epoch(s), '
-              f'Checkpoint every {ckpt_every_n_epochs} epoch(s)')
 
     for iteration in range(start_iter, max_iters):
         # Detect epoch boundary
         new_epoch = iteration // iters_per_epoch
-        is_epoch_end = (iteration + 1) % iters_per_epoch == 0 or \
-                       (iteration + 1) == max_iters
+        is_epoch_end = ((iteration + 1) % iters_per_epoch == 0) or ((iteration + 1) == max_iters)
         if new_epoch != current_epoch:
             current_epoch = new_epoch
+            if rank == 0:
+                print(f'\n=== Epoch {current_epoch}/{max_epochs} complete ===')
 
         # Get batch (with cycling)
         try:
             batch = next(data_iter)
         except StopIteration:
             if train_sampler:
-                train_sampler.set_epoch(iteration)
+                train_sampler.set_epoch(current_epoch)
             data_iter = iter(train_loader)
             batch = next(data_iter)
 
@@ -429,10 +453,10 @@ def main():
         if rank == 0 and (iteration + 1) % log_interval == 0:
             lr = optimizer.param_groups[0]['lr']
             epoch_num = (iteration + 1) // iters_per_epoch + 1
-            epoch_frac = ((iteration + 1) % iters_per_epoch) / iters_per_epoch
             loss_str = ' | '.join(
                 f'{k}: {v.item():.4f}' for k, v in losses.items())
-            print(f'[Epoch {epoch_num} | Iter {iteration + 1}/{max_iters}] '
+            progress_pct = 100 * (iteration + 1) / max_iters
+            print(f'[Epoch {epoch_num} | Iter {iteration + 1}/{max_iters} ({progress_pct:.1f}%)] '
                   f'{loss_str} | lr: {lr:.2e}')
 
             # W&B log
@@ -450,7 +474,12 @@ def main():
                 epoch_num = 1  # handle edge case
 
             # Checkpoint every N epochs
-            if epoch_num % ckpt_every_n_epochs == 0 or (iteration + 1) == max_iters:
+            save_ckpt = (epoch_num % ckpt_epoch_interval == 0) or ((iteration + 1) == max_iters)
+            # Also support fallback to iteration-based
+            if ckpt_interval is not None and not save_ckpt:
+                save_ckpt = ((iteration + 1) % ckpt_interval == 0)
+
+            if save_ckpt:
                 ckpt_path = osp.join(work_dir, f'epoch_{epoch_num}.pth')
                 save_dict = dict(
                     model=raw_model.state_dict(),
@@ -474,7 +503,12 @@ def main():
                 print(f'Saved checkpoint: {ckpt_path}')
 
             # Evaluation every N epochs
-            if epoch_num % eval_every_n_epochs == 0 or (iteration + 1) == max_iters:
+            do_eval = (epoch_num % eval_epoch_interval == 0) or ((iteration + 1) == max_iters)
+            # Also support fallback to iteration-based
+            if eval_interval is not None and not do_eval:
+                do_eval = ((iteration + 1) % eval_interval == 0)
+
+            if do_eval:
                 print(f'\n[Eval @ Epoch {epoch_num}, Iter {iteration + 1}]')
                 # Apply EMA for evaluation
                 if ema:
@@ -503,7 +537,7 @@ def main():
                     print(f'  {cname:<15} {per_class_pseudo[c]:>10.4f} '
                           f'{per_class_pred[c]:>10.4f} {s}{d:>9.4f}')
                 print(f'  {"-"*45}')
-                print(f'  {"mIoU":<15} {miou_pseudo:>10.4f} '
+                print(f'  {"mIOU":<15} {miou_pseudo:>10.4f} '
                       f'{miou_pred:>10.4f} {sign}{miou_delta:>9.4f}')
 
                 # W&B log evaluation metrics
