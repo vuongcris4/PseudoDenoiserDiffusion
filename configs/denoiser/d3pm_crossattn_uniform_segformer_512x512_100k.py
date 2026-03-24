@@ -6,7 +6,8 @@ _base_ = [
 ]
 
 # Pretrained backbone uses BN; smaller batch may require adjustment
-data = dict(samples_per_gpu=4, workers_per_gpu=4)
+# Updated for 1 GPU with batch_size=2
+data = dict(samples_per_gpu=2, workers_per_gpu=4)
 
 # Lower LR for pretrained condition encoder to prevent catastrophic forgetting
 optimizer = dict(lr=5e-5)

@@ -25,6 +25,7 @@ from tqdm import tqdm
 sys.path.insert(0, osp.join(osp.dirname(__file__), '..'))
 
 from diffusion_denoiser.utils.config import Config
+from diffusion_denoiser.utils.param_utils import log_model_params
 from diffusion_denoiser.models.diffusion_denoiser import DiffusionDenoiserModel
 
 
@@ -68,6 +69,7 @@ def main():
 
     model = model.to(args.device)
     model.eval()
+    log_model_params(model)
 
     # Normalization
     img_norm_cfg = cfg.data.get('img_norm_cfg', cfg.data.train.get(

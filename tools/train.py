@@ -17,6 +17,7 @@ import argparse
 import copy
 import os
 import os.path as osp
+import subprocess
 import sys
 import time
 
@@ -30,6 +31,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 sys.path.insert(0, osp.join(osp.dirname(__file__), '..'))
 
 from diffusion_denoiser.utils.config import Config
+from diffusion_denoiser.utils.param_utils import log_model_params
 from diffusion_denoiser.models.diffusion_denoiser import DiffusionDenoiserModel
 from diffusion_denoiser.datasets.pseudo_label_dataset import PseudoLabelDiffusionDataset
 from diffusion_denoiser.datasets.oem_ciscr_dataset import OEMCISCRCrossEntropyDataset
@@ -262,12 +264,31 @@ def main():
                 config=full_config,
                 dir=work_dir)
 
+            # Log git commit info
+            try:
+                git_commit = subprocess.check_output(
+                    ['git', 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL).decode('ascii').strip()
+                git_branch = subprocess.check_output(
+                    ['git', 'rev-parse', '--abbrev-ref', 'HEAD'], stderr=subprocess.DEVNULL).decode('ascii').strip()
+                git_diff = subprocess.check_output(
+                    ['git', 'diff', 'HEAD'], stderr=subprocess.DEVNULL).decode('ascii').strip()
+
+                wandb.run.tags = list(wandb.run.tags or []) + [git_commit[:7]]
+                wandb.run.log_code(root='.')
+                wandb.config.update({
+                    'git_commit': git_commit,
+                    'git_branch': git_branch,
+                    'git_dirty': bool(git_diff)
+                })
+            except Exception as git_err:
+                print(f'Warning: Could not log git info: {git_err}')
+
             # Log additional run metadata
             wandb.run.tags = [
                 cfg.model.get('cond_type', 'concat'),
                 cfg.model.get('transition_type', 'uniform'),
                 f"bs{cfg.data.get('samples_per_gpu', 1)}",
-            ]
+            ] + list(wandb.run.tags or [])
         except Exception as e:
             print(f'Warning: W&B init failed ({e}). Training without W&B logging.')
             HAS_WANDB = False
@@ -281,6 +302,11 @@ def main():
     if distributed:
         model = DDP(model, device_ids=[args.local_rank])
     raw_model = model.module if distributed else model
+
+    # Log parameter counts (trainable vs frozen)
+    if rank == 0:
+        wb_run = wandb.run if HAS_WANDB else None
+        log_model_params(raw_model, wandb_run=wb_run)
 
     # EMA
     use_ema = cfg.get('use_ema', True)
@@ -340,12 +366,30 @@ def main():
     ckpt_interval = cfg.get('checkpoint_interval', 10000)
     eval_interval = cfg.get('eval_interval', 10000)
 
+    # Epoch tracking
+    import math
+    iters_per_epoch = math.ceil(len(train_dataset) / cfg.data.samples_per_gpu)
+    current_epoch = start_iter // iters_per_epoch
+    eval_every_n_epochs = cfg.get('eval_epoch_interval', 1)
+    ckpt_every_n_epochs = cfg.get('ckpt_epoch_interval', 1)
+
     if rank == 0:
-        print(f'Starting training for {max_iters} iterations...')
+        print(f'Starting training for {max_iters} iterations '
+              f'(~{max_iters / iters_per_epoch:.0f} epochs, '
+              f'{iters_per_epoch} iters/epoch)...')
         print(f'Model: {cfg.model.type}, cond: {cfg.model.cond_type}, '
               f'noise: {cfg.model.transition_type}')
+        print(f'Eval every {eval_every_n_epochs} epoch(s), '
+              f'Checkpoint every {ckpt_every_n_epochs} epoch(s)')
 
     for iteration in range(start_iter, max_iters):
+        # Detect epoch boundary
+        new_epoch = iteration // iters_per_epoch
+        is_epoch_end = (iteration + 1) % iters_per_epoch == 0 or \
+                       (iteration + 1) == max_iters
+        if new_epoch != current_epoch:
+            current_epoch = new_epoch
+
         # Get batch (with cycling)
         try:
             batch = next(data_iter)
@@ -384,88 +428,103 @@ def main():
         # Logging
         if rank == 0 and (iteration + 1) % log_interval == 0:
             lr = optimizer.param_groups[0]['lr']
+            epoch_num = (iteration + 1) // iters_per_epoch + 1
+            epoch_frac = ((iteration + 1) % iters_per_epoch) / iters_per_epoch
             loss_str = ' | '.join(
                 f'{k}: {v.item():.4f}' for k, v in losses.items())
-            print(f'[Iter {iteration + 1}/{max_iters}] {loss_str} | lr: {lr:.2e}')
+            print(f'[Epoch {epoch_num} | Iter {iteration + 1}/{max_iters}] '
+                  f'{loss_str} | lr: {lr:.2e}')
 
             # W&B log
             if HAS_WANDB:
                 log_dict = {k: v.item() for k, v in losses.items()}
                 log_dict['learning_rate'] = lr
                 log_dict['iteration'] = iteration + 1
+                log_dict['epoch'] = epoch_num
                 wandb.log(log_dict)
 
-        # Checkpoint
-        if rank == 0 and (iteration + 1) % ckpt_interval == 0:
-            ckpt_path = osp.join(work_dir, f'iter_{iteration + 1}.pth')
-            save_dict = dict(
-                model=raw_model.state_dict(),
-                optimizer=optimizer.state_dict(),
-                iter=iteration + 1,
-                config_path=args.config)
-            if ema:
-                save_dict['ema'] = ema.shadow
-            # Save W&B run info so test.py can resume the same run
-            if HAS_WANDB and wandb.run is not None:
-                save_dict['wandb_run_id'] = wandb.run.id
-                save_dict['wandb_project'] = wandb.run.project
-                save_dict['wandb_entity'] = wandb.run.entity
-            torch.save(save_dict, ckpt_path)
-            # Symlink latest
-            latest = osp.join(work_dir, 'latest.pth')
-            if osp.exists(latest):
-                os.remove(latest)
-            os.symlink(osp.basename(ckpt_path), latest)
-            print(f'Saved checkpoint: {ckpt_path}')
+        # Epoch-based checkpoint & evaluation
+        if rank == 0 and is_epoch_end:
+            epoch_num = (iteration + 1) // iters_per_epoch
+            if epoch_num == 0:
+                epoch_num = 1  # handle edge case
 
-        # Evaluation
-        if rank == 0 and (iteration + 1) % eval_interval == 0:
-            # Apply EMA for evaluation
-            if ema:
-                backup = {k: v.data.clone() for k, v in raw_model.named_parameters()}
-                ema.apply(raw_model)
+            # Checkpoint every N epochs
+            if epoch_num % ckpt_every_n_epochs == 0 or (iteration + 1) == max_iters:
+                ckpt_path = osp.join(work_dir, f'epoch_{epoch_num}.pth')
+                save_dict = dict(
+                    model=raw_model.state_dict(),
+                    optimizer=optimizer.state_dict(),
+                    iter=iteration + 1,
+                    epoch=epoch_num,
+                    config_path=args.config)
+                if ema:
+                    save_dict['ema'] = ema.shadow
+                # Save W&B run info so test.py can resume the same run
+                if HAS_WANDB and wandb.run is not None:
+                    save_dict['wandb_run_id'] = wandb.run.id
+                    save_dict['wandb_project'] = wandb.run.project
+                    save_dict['wandb_entity'] = wandb.run.entity
+                torch.save(save_dict, ckpt_path)
+                # Symlink latest
+                latest = osp.join(work_dir, 'latest.pth')
+                if osp.exists(latest):
+                    os.remove(latest)
+                os.symlink(osp.basename(ckpt_path), latest)
+                print(f'Saved checkpoint: {ckpt_path}')
 
-            eval_results = evaluate(raw_model, val_loader, device)
-            miou_pred = eval_results['miou_pred']
-            miou_pseudo = eval_results['miou_pseudo']
-            miou_delta = eval_results['miou_delta']
-            per_class_pred = eval_results['per_class_iou_pred']
-            per_class_pseudo = eval_results['per_class_iou_pseudo']
+            # Evaluation every N epochs
+            if epoch_num % eval_every_n_epochs == 0 or (iteration + 1) == max_iters:
+                print(f'\n[Eval @ Epoch {epoch_num}, Iter {iteration + 1}]')
+                # Apply EMA for evaluation
+                if ema:
+                    backup = {k: v.data.clone() for k, v in raw_model.named_parameters()}
+                    ema.apply(raw_model)
 
-            sign = '+' if miou_delta >= 0 else ''
-            print(f'[Eval @ Iter {iteration + 1}]')
-            print(f'  Pseudo-label mIoU (baseline): {miou_pseudo:.4f}')
-            print(f'  Output mIoU (denoised):       {miou_pred:.4f}')
-            print(f'  Improved mIoU (Δ):            {sign}{miou_delta:.4f}')
-            print(f'  Per-class (pred):   {np.array2string(per_class_pred, precision=4)}')
-            print(f'  Per-class (pseudo): {np.array2string(per_class_pseudo, precision=4)}')
+                eval_results = evaluate(raw_model, val_loader, device)
+                miou_pred = eval_results['miou_pred']
+                miou_pseudo = eval_results['miou_pseudo']
+                miou_delta = eval_results['miou_delta']
+                per_class_pred = eval_results['per_class_iou_pred']
+                per_class_pseudo = eval_results['per_class_iou_pseudo']
 
-            # W&B log evaluation metrics
-            if HAS_WANDB:
-                wandb.log({
-                    'val/mIoU_pseudo': miou_pseudo,
-                    'val/mIoU_output': miou_pred,
-                    'val/mIoU_improved': miou_delta,
-                    'iteration': iteration + 1
-                })
-                # Save per-class IoU as table
+                sign = '+' if miou_delta >= 0 else ''
+                # Per-class IoU table
+                CLASS_NAMES = ['Bareland', 'Rangeland', 'Developed', 'Road',
+                               'Tree', 'Water', 'Agriculture']
                 num_c = len(per_class_pred)
-                class_names = [f'Class_{i}' for i in range(num_c)]
-                wandb.log({
-                    'val/iou_table': wandb.Table(
-                        columns=['Class', 'IoU_Pseudo', 'IoU_Denoised', 'Δ'],
-                        data=[
-                            [class_names[i], per_class_pseudo[i],
-                             per_class_pred[i],
-                             per_class_pred[i] - per_class_pseudo[i]]
-                            for i in range(num_c)
-                        ]
-                    ),
-                    'iteration': iteration + 1
-                })
 
-            if ema:
-                ema.restore(raw_model, backup)
+                print(f'  {"Class":<15} {"Pseudo":>10} {"Denoised":>10} {"Δ":>10}')
+                print(f'  {"-"*45}')
+                for c in range(num_c):
+                    cname = CLASS_NAMES[c] if c < len(CLASS_NAMES) else f'Class_{c}'
+                    d = per_class_pred[c] - per_class_pseudo[c]
+                    s = '+' if d >= 0 else ''
+                    print(f'  {cname:<15} {per_class_pseudo[c]:>10.4f} '
+                          f'{per_class_pred[c]:>10.4f} {s}{d:>9.4f}')
+                print(f'  {"-"*45}')
+                print(f'  {"mIoU":<15} {miou_pseudo:>10.4f} '
+                      f'{miou_pred:>10.4f} {sign}{miou_delta:>9.4f}')
+
+                # W&B log evaluation metrics
+                if HAS_WANDB:
+                    log_dict = {
+                        'val/mIoU_pseudo': miou_pseudo,
+                        'val/mIoU_output': miou_pred,
+                        'val/mIoU_improved': miou_delta,
+                        'epoch': epoch_num,
+                        'iteration': iteration + 1,
+                    }
+                    # Per-class IoU as individual scalar metrics
+                    for c in range(num_c):
+                        cname = CLASS_NAMES[c] if c < len(CLASS_NAMES) else f'Class_{c}'
+                        log_dict[f'val/iou_pseudo/{cname}'] = float(per_class_pseudo[c])
+                        log_dict[f'val/iou_denoised/{cname}'] = float(per_class_pred[c])
+                        log_dict[f'val/iou_delta/{cname}'] = float(per_class_pred[c] - per_class_pseudo[c])
+                    wandb.log(log_dict)
+
+                if ema:
+                    ema.restore(raw_model, backup)
 
     if rank == 0:
         print('Training complete.')

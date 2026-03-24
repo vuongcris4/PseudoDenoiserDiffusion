@@ -35,6 +35,7 @@ from tqdm import tqdm
 sys.path.insert(0, osp.join(osp.dirname(__file__), '..'))
 
 from diffusion_denoiser.utils.config import Config
+from diffusion_denoiser.utils.param_utils import log_model_params
 from diffusion_denoiser.models.diffusion_denoiser import DiffusionDenoiserModel
 from diffusion_denoiser.datasets.pseudo_label_dataset import PseudoLabelDiffusionDataset
 from diffusion_denoiser.datasets.oem_ciscr_dataset import OEMCISCRCrossEntropyDataset
@@ -320,6 +321,13 @@ def run_evaluation(model, cfg, device, checkpoint_path=None,
         wandb.summary['eval/mIoU_improved'] = round(delta, 4)
         wandb.summary['eval/checkpoint_iter'] = ckpt_iter
 
+        # Per-class IoU as individual summary metrics
+        for c in range(num_classes):
+            cname = CLASS_NAMES[c] if c < len(CLASS_NAMES) else f'Class_{c}'
+            wandb.summary[f'eval/iou_pseudo/{cname}'] = round(float(mean_iou_pseudo[c]), 4)
+            wandb.summary[f'eval/iou_denoised/{cname}'] = round(float(mean_iou_pred[c]), 4)
+            wandb.summary[f'eval/iou_delta/{cname}'] = round(float(mean_iou_pred[c] - mean_iou_pseudo[c]), 4)
+
         # Per-class IoU table
         class_table = wandb.Table(
             columns=['Class', 'IoU_Pseudo', 'IoU_Denoised', 'Δ'],
@@ -428,6 +436,7 @@ def main():
 
     model = model.to(device)
     model.eval()
+    log_model_params(model)
     print(f'Checkpoint iteration: {ckpt.get("iter", "unknown")}')
 
     # ── Run evaluation ──────────────────────────────────────────────────
