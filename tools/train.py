@@ -322,6 +322,10 @@ def main():
         betas=opt_cfg.get('betas', (0.9, 0.999)),
         weight_decay=opt_cfg.get('weight_decay', 0.01))
 
+    # Dataset
+    train_dataset = build_dataset(cfg.data.train, is_train=True)
+    val_dataset = build_dataset(cfg.data.val, is_train=False)
+
     # LR scheduler
     max_epochs = cfg.get('max_epochs', None)
     max_iters = cfg.get('max_iters', None)
@@ -344,10 +348,6 @@ def main():
     warmup_iters = cfg.get('lr_scheduler', {}).get('warmup_iters', 5000)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=max_iters - warmup_iters, eta_min=1e-6)
-
-    # Dataset
-    train_dataset = build_dataset(cfg.data.train, is_train=True)
-    val_dataset = build_dataset(cfg.data.val, is_train=False)
 
     train_sampler = DistributedSampler(train_dataset) if distributed else None
     train_loader = DataLoader(
