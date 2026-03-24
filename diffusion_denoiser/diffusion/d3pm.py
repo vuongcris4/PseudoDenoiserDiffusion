@@ -181,9 +181,14 @@ class D3PM(nn.Module):
         Returns:
             Tensor: Scalar KL loss.
         """
+        # Clamp ignore pixels to valid range for one-hot encoding
+        # (the KL values at these positions are masked out below)
+        x_0_safe = x_0.clamp(0, self.num_classes - 1)
+        x_t_safe = x_t.clamp(0, self.num_classes - 1)
+
         # True posterior: q(x_{t-1} | x_t, x_0)
         true_posterior = self.noise_schedule.q_posterior(
-            x_0, x_t, t)  # (B, H, W, K)
+            x_0_safe, x_t_safe, t)  # (B, H, W, K)
 
         # Predicted posterior: use predicted x_0 to compute posterior
         x_0_pred = x_0_logits.argmax(dim=1)  # (B, H, W)
@@ -192,7 +197,7 @@ class D3PM(nn.Module):
 
         # Compute predicted posterior using soft x_0 probabilities
         pred_posterior = self._soft_posterior(
-            x_0_probs, x_t, t)  # (B, H, W, K)
+            x_0_probs, x_t_safe, t)  # (B, H, W, K)
 
         # KL divergence
         true_posterior = true_posterior.clamp(min=1e-10)
@@ -236,7 +241,7 @@ class D3PM(nn.Module):
                      (1 - is_t0) * Q_bar_prev
 
         # x_t one-hot: (B, H*W, K)
-        x_t_oh = F.one_hot(x_t.long(), K).float().view(B, H * W, K)
+        x_t_oh = F.one_hot(x_t.clamp(0, K - 1).long(), K).float().view(B, H * W, K)
 
         # For each possible x_0 value, compute q(x_{t-1} | x_t, x_0=k)
         # Then weight by p_θ(x_0=k)
