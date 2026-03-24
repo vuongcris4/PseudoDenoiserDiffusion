@@ -141,11 +141,14 @@ def evaluate(model, val_loader, device, num_steps=10):
         # Denoise with reduced steps for speed
         pred = model.denoise(satellite, pseudo, num_steps=num_steps)
 
+        # Build valid mask (exclude ignore pixels = 255)
+        valid = (clean != 255)
+
         # Compute per-class IoU for denoised output
         for c in range(num_classes):
-            pred_c = (pred == c)
-            pseudo_c = (pseudo == c)
-            gt_c = (clean == c)
+            pred_c = (pred == c) & valid
+            pseudo_c = (pseudo == c) & valid
+            gt_c = (clean == c) & valid
 
             inter_pred[c] += (pred_c & gt_c).sum()
             union_pred[c] += (pred_c | gt_c).sum()
@@ -525,7 +528,7 @@ def main():
                 sign = '+' if miou_delta >= 0 else ''
                 # Per-class IoU table
                 CLASS_NAMES = ['Bareland', 'Rangeland', 'Developed', 'Road',
-                               'Tree', 'Water', 'Agriculture']
+                               'Tree', 'Water', 'Agriculture', 'Building']
                 num_c = len(per_class_pred)
 
                 print(f'  {"Class":<15} {"Pseudo":>10} {"Denoised":>10} {"Δ":>10}')

@@ -6,7 +6,7 @@
 # are frozen; layer3-4 are finetuned.  Features are projected from
 # [256, 512, 1024, 2048] to [64, 128, 256, 512].
 
-num_classes = 7
+num_classes = 8
 
 model = dict(
     type='DiffusionDenoiserModel',

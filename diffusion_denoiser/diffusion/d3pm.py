@@ -51,11 +51,12 @@ class D3PM(nn.Module):
     def __init__(self,
                  denoise_model: nn.Module,
                  noise_schedule: DiscreteNoiseSchedule,
-                 num_classes: int = 7,
+                 num_classes: int = 8,
                  num_timesteps: int = 100,
                  loss_type: str = 'hybrid',
                  hybrid_lambda: float = 0.01,
-                 parameterization: str = 'x0'):
+                 parameterization: str = 'x0',
+                 ignore_index: int = 255):
         super().__init__()
         self.denoise_model = denoise_model
         self.noise_schedule = noise_schedule
@@ -64,6 +65,7 @@ class D3PM(nn.Module):
         self.loss_type = loss_type
         self.hybrid_lambda = hybrid_lambda
         self.parameterization = parameterization
+        self.ignore_index = ignore_index
 
     def forward(self, x_0: torch.Tensor, condition: torch.Tensor,
                 x_init: Optional[torch.Tensor] = None,
@@ -90,8 +92,10 @@ class D3PM(nn.Module):
         # Forward diffusion: sample x_t ~ q(x_t | x_init)
         # If x_init (pseudo_label) is provided, noise from pseudo-label
         # Otherwise, noise from ground truth (self-training mode)
-        x_t = self.noise_schedule.q_sample(
-            x_init if x_init is not None else x_0, t)
+        # Clamp to valid range (ignore pixels may have value 255)
+        source = x_init if x_init is not None else x_0
+        source = source.clamp(0, self.num_classes - 1)
+        x_t = self.noise_schedule.q_sample(source, t)
 
         # Model predicts x_0 logits from x_t and condition
         x_0_logits = self._predict_x0(x_t, t, condition)  # (B, K, H, W)
@@ -113,9 +117,11 @@ class D3PM(nn.Module):
         Returns:
             Tensor: Predicted x_0 logits (B, K, H, W).
         """
+        # Clamp x_t to valid range (ignore pixels may have value 255)
+        x_t_safe = x_t.long().clamp(0, self.num_classes - 1)
         # Convert x_t to one-hot: (B, K, H, W)
         x_t_onehot = F.one_hot(
-            x_t.long(), self.num_classes).permute(0, 3, 1, 2).float()
+            x_t_safe, self.num_classes).permute(0, 3, 1, 2).float()
 
         # Forward through denoising network
         x_0_logits = self.denoise_model(x_t_onehot, t, condition)
@@ -138,9 +144,10 @@ class D3PM(nn.Module):
         """
         losses = {}
 
-        # Cross-entropy loss on x_0 prediction
+        # Cross-entropy loss on x_0 prediction (ignoring nodata pixels)
         ce_loss = F.cross_entropy(
-            x_0_logits, x_0.long(), reduction='mean')
+            x_0_logits, x_0.long(), reduction='mean',
+            ignore_index=self.ignore_index)
         losses['loss_ce'] = ce_loss
 
         if self.loss_type == 'ce':
@@ -193,7 +200,14 @@ class D3PM(nn.Module):
 
         kl = true_posterior * (
             torch.log(true_posterior) - torch.log(pred_posterior))
-        kl = kl.sum(dim=-1).mean()  # Sum over classes, mean over B,H,W
+        kl = kl.sum(dim=-1)  # Sum over classes → (B, H, W)
+
+        # Mask out ignore pixels from KL loss
+        valid_mask = (x_0 != self.ignore_index)
+        if valid_mask.any():
+            kl = kl[valid_mask].mean()
+        else:
+            kl = kl.mean() * 0.0  # no valid pixels, return 0
 
         return kl
 
@@ -270,7 +284,7 @@ class D3PM(nn.Module):
 
         # Initialize x_T
         if noisy_label is not None:
-            x_t = noisy_label.long()
+            x_t = noisy_label.long().clamp(0, self.num_classes - 1)
         else:
             # Start from uniform random
             x_t = torch.randint(0, self.num_classes, (B, H, W), device=device)

@@ -1,6 +1,6 @@
 # D3PM with hybrid conditioning (concat + cross-attention) and absorbing noise.
 
-num_classes = 7
+num_classes = 8
 
 model = dict(
     type='DiffusionDenoiserModel',

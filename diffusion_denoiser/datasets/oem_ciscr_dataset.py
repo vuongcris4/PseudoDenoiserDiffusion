@@ -23,8 +23,10 @@ import torch
 from torch.utils.data import Dataset
 from typing import List, Tuple, Dict
 
-# 7 classes for segmentation (after mapping from OEM 8 classes)
-NUM_CLASSES = 7
+# 8 classes for segmentation (OEM raw labels 1-8 → mapped to 0-7)
+# Raw 0 = nodata/background → mapped to IGNORE_INDEX (255)
+NUM_CLASSES = 8
+IGNORE_INDEX = 255
 
 
 def get_split_file(data_root: str, split: str = 'train') -> str:
@@ -166,13 +168,17 @@ class OEMCISCRCrossEntropyDataset(Dataset):
         # Image: [H, W, 3] -> [3, H, W], normalize to [0, 1]
         img_t = torch.from_numpy(img.transpose(2, 0, 1).copy()).float() / 255.0
 
-        # Pseudo-label: keep as class indices (no one-hot)
-        # Clip to valid range [0, num_classes-1]
-        pseudo_np = np.clip(pseudo.astype(np.int32), 0, self.num_classes - 1)
+        # Remap OEM labels: raw 1-8 → class 0-7, raw 0 → IGNORE_INDEX (255)
+        pseudo_np = pseudo.astype(np.int32)
+        pseudo_np = np.where(pseudo_np == 0, IGNORE_INDEX, pseudo_np - 1)
+        pseudo_np = np.clip(pseudo_np, 0, self.num_classes - 1)
+        pseudo_np[pseudo == 0] = IGNORE_INDEX  # re-apply after clip
         pseudo_t = torch.from_numpy(pseudo_np.copy()).long()
 
-        # Clean label: keep as class indices
-        clean_np = np.clip(clean.astype(np.int32), 0, self.num_classes - 1)
+        clean_np = clean.astype(np.int32)
+        clean_np = np.where(clean_np == 0, IGNORE_INDEX, clean_np - 1)
+        clean_np = np.clip(clean_np, 0, self.num_classes - 1)
+        clean_np[clean == 0] = IGNORE_INDEX  # re-apply after clip
         clean_t = torch.from_numpy(clean_np.copy()).long()
 
         return {

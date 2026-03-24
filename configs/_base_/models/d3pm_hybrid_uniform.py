@@ -4,7 +4,7 @@
 # cross-attention in the UNet. This provides the strongest conditioning
 # signal at the cost of more computation.
 
-num_classes = 7
+num_classes = 8
 
 model = dict(
     type='DiffusionDenoiserModel',

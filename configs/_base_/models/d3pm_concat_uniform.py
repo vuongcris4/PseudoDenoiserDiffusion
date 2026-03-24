@@ -8,7 +8,7 @@
 
 model = dict(
     type='DiffusionDenoiserModel',
-    num_classes=7,
+    num_classes=8,
     num_timesteps=100,
     base_channels=64,
     channel_mult=(1, 2, 4, 8),

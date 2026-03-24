@@ -3,7 +3,7 @@
 # Satellite features are injected via cross-attention in the UNet's
 # bottleneck and at attention resolutions. Input is only the noisy label.
 
-num_classes = 7
+num_classes = 8
 
 model = dict(
     type='DiffusionDenoiserModel',

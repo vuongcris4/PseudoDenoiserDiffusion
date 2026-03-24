@@ -3,7 +3,7 @@
 
 dataset_type = 'OEMCISCRCrossEntropyDataset'
 data_root = 'data/OEM_v2_aDanh'
-num_classes = 7
+num_classes = 8
 
 img_size = 512
 

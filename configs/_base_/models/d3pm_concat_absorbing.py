@@ -4,7 +4,7 @@
 # The last class index (K-1) acts as the absorbing "mask" state.
 # Useful when the model should learn to "unmask" labels.
 
-num_classes = 7
+num_classes = 8
 
 model = dict(
     type='DiffusionDenoiserModel',

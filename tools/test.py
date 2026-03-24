@@ -52,22 +52,11 @@ DATASET_REGISTRY = {
     'OEMCISCRCrossEntropyDataset': OEMCISCRCrossEntropyDataset,
 }
 
-# ── Colormap for 7 OEM classes ──────────────────────────────────────────────
-# 0=Bareland, 1=Rangeland, 2=Developed, 3=Road, 4=Tree, 5=Water, 6=Agriculture
-CLASS_NAMES = [
-    'Bareland', 'Rangeland', 'Developed', 'Road',
-    'Tree', 'Water', 'Agriculture',
-]
-
-CLASS_COLORS = np.array([
-    [128, 128, 128],   # 0 Bareland     - gray
-    [0, 255, 0],       # 1 Rangeland    - green
-    [255, 0, 0],       # 2 Developed    - red
-    [255, 255, 0],     # 3 Road         - yellow
-    [0, 128, 0],       # 4 Tree         - dark green
-    [0, 0, 255],       # 5 Water        - blue
-    [255, 165, 0],     # 6 Agriculture  - orange
-], dtype=np.uint8)
+# ── OEM class palette (shared) ──────────────────────────────────────────────
+from diffusion_denoiser.datasets.oem_classes import (
+    CLASS_NAMES, CLASS_COLORS, NODATA_COLOR, NUM_CLASSES, IGNORE_INDEX,
+    colorize_mask,
+)
 
 
 # ── Utility functions ───────────────────────────────────────────────────────
@@ -87,13 +76,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def colorize_mask(mask: np.ndarray, num_classes: int) -> np.ndarray:
-    """Convert class-index mask (H, W) to RGB (H, W, 3) using CLASS_COLORS."""
-    h, w = mask.shape
-    rgb = np.zeros((h, w, 3), dtype=np.uint8)
-    for c in range(min(num_classes, len(CLASS_COLORS))):
-        rgb[mask == c] = CLASS_COLORS[c]
-    return rgb
+
 
 
 def compute_miou(pred, gt, num_classes, ignore_index=255):
