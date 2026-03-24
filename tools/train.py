@@ -357,9 +357,10 @@ def main():
 
         satellite = batch['satellite_img'].to(device)
         clean_label = batch['clean_label'].to(device)
+        pseudo_label = batch['pseudo_label'].to(device)
 
-        # Forward
-        losses = model(clean_label, satellite)
+        # Forward: noise from pseudo-label, target is clean_label
+        losses = model(clean_label, satellite, pseudo_label)
         loss = losses['loss_total']
 
         # Backward

@@ -66,12 +66,17 @@ class D3PM(nn.Module):
         self.parameterization = parameterization
 
     def forward(self, x_0: torch.Tensor, condition: torch.Tensor,
+                x_init: Optional[torch.Tensor] = None,
                 **kwargs) -> Dict[str, torch.Tensor]:
         """Training forward pass.
 
         Args:
-            x_0 (Tensor): Clean labels (B, H, W), class indices.
+            x_0 (Tensor): Clean labels / ground truth (B, H, W), class indices.
+                Used as target for loss computation.
             condition (Tensor): Satellite image (B, 3, H, W).
+            x_init (Tensor, optional): Initial noisy labels (pseudo-labels)
+                (B, H, W), class indices. If None, defaults to x_0.
+                Used as starting point for forward diffusion.
 
         Returns:
             dict: Loss dictionary with 'loss_total' and component losses.
@@ -82,13 +87,16 @@ class D3PM(nn.Module):
         # Sample random timesteps
         t = torch.randint(0, self.num_timesteps, (B,), device=device)
 
-        # Forward diffusion: sample x_t ~ q(x_t | x_0)
-        x_t = self.noise_schedule.q_sample(x_0, t)
+        # Forward diffusion: sample x_t ~ q(x_t | x_init)
+        # If x_init (pseudo_label) is provided, noise from pseudo-label
+        # Otherwise, noise from ground truth (self-training mode)
+        x_t = self.noise_schedule.q_sample(
+            x_init if x_init is not None else x_0, t)
 
         # Model predicts x_0 logits from x_t and condition
         x_0_logits = self._predict_x0(x_t, t, condition)  # (B, K, H, W)
 
-        # Compute loss
+        # Compute loss (always against ground truth x_0)
         losses = self._compute_loss(x_0, x_t, x_0_logits, t)
 
         return losses

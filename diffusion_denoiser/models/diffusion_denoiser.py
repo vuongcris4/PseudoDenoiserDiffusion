@@ -98,17 +98,23 @@ class DiffusionDenoiserModel(nn.Module):
 
     def forward(self, clean_label: torch.Tensor,
                 satellite_img: torch.Tensor,
+                pseudo_label: Optional[torch.Tensor] = None,
                 **kwargs) -> Dict[str, torch.Tensor]:
         """Training forward.
 
         Args:
             clean_label (Tensor): Clean GT labels (B, H, W).
+                Used as target for loss computation.
             satellite_img (Tensor): Satellite image (B, 3, H, W).
+                Used as condition for denoising.
+            pseudo_label (Tensor, optional): Noisy pseudo-labels (B, H, W).
+                If provided, forward diffusion starts from pseudo-label.
+                If None, defaults to clean_label (self-training mode).
 
         Returns:
             dict: Loss dictionary.
         """
-        return self.d3pm(clean_label, satellite_img)
+        return self.d3pm(clean_label, satellite_img, x_init=pseudo_label)
 
     @torch.no_grad()
     def denoise(self, satellite_img: torch.Tensor,
