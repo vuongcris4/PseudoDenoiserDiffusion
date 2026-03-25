@@ -30,4 +30,4 @@ model = dict(
     transition_type='uniform',
     beta_schedule='cosine',
     loss_type='hybrid',
-    hybrid_lambda=0.01)
+    hybrid_lambda=0.1)
