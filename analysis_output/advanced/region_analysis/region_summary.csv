@@ -1,0 +1,9 @@
+class,gt_total_regions,mean_size,median_size,mean_region_accuracy,median_region_accuracy
+Bareland,3762,12030.2,225.5,0.0448,0.0000
+Rangeland,294322,1610.9,71.0,0.2311,0.0000
+Developed,265223,1620.5,37.0,0.4222,0.3529
+Road,13691,11583.8,939.0,0.3047,0.1327
+Tree,395349,1054.1,130.0,0.4379,0.4227
+Water,9200,7727.9,164.5,0.0985,0.0000
+Agriculture,10948,26080.3,1136.0,0.3090,0.0000
+Building,172809,2297.7,635.0,0.6893,0.8473
