@@ -8,7 +8,7 @@ lr_scheduler = dict(
     warmup_ratio=1e-6,
     min_lr=1e-6)
 
-max_epochs = 100
+max_epochs = 30
 # checkpoint_interval and log_interval are defined in default_runtime.py
 # checkpoint_interval = 10 epochs
 eval_epoch_interval = 1
