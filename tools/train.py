@@ -83,6 +83,7 @@ def parse_args():
     parser.add_argument('config', help='Config file path')
     parser.add_argument('--work-dir', help='Working directory')
     parser.add_argument('--resume-from', help='Checkpoint to resume from')
+    parser.add_argument('--wandb-run-id', help='W&B run ID to resume (e.g., 4lr78nti)')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--cfg-options', nargs='+', action='store', default=[],
                         help='Override config settings. key=value pairs')
@@ -209,8 +210,16 @@ def main():
 
     # W&B init with full experiment metadata
     global HAS_WANDB  # may be reassigned in except block below
+    wandb_run_id = args.wandb_run_id  # Priority 1: CLI argument
     if rank == 0 and HAS_WANDB:
         wandb_cfg = cfg.get('wandb', dict(project='pseudo-denoiser-d3pm'))
+
+        # Priority 2: Load from checkpoint if not specified via CLI
+        if not wandb_run_id and args.resume_from and osp.exists(args.resume_from):
+            ckpt = torch.load(args.resume_from, map_location='cpu')
+            wandb_run_id = ckpt.get('wandb_run_id')
+            if wandb_run_id:
+                print(f'Resuming W&B run from checkpoint: {wandb_run_id}')
 
         # Build comprehensive experiment config
         full_config = {
@@ -267,7 +276,9 @@ def main():
                 project=wandb_cfg.get('project', 'pseudo-denoiser-d3pm'),
                 name=wandb_cfg.get('name', osp.splitext(osp.basename(args.config))[0]),
                 config=full_config,
-                dir=work_dir)
+                dir=work_dir,
+                resume='must' if wandb_run_id else 'auto',
+                id=wandb_run_id)
 
             # Log git commit info
             try:
@@ -335,7 +346,8 @@ def main():
 
     # Compute training length
     import math
-    iters_per_epoch = math.ceil(len(train_dataset) / cfg.data.samples_per_gpu)
+    # Use floor() to match actual iterations with drop_last=True
+    iters_per_epoch = len(train_dataset) // cfg.data.samples_per_gpu
 
     if max_epochs is not None:
         max_iters = max_epochs * iters_per_epoch
