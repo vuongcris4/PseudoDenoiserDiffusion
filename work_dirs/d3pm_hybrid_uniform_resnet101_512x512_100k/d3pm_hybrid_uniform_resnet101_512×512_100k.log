@@ -1,0 +1,389 @@
+Warning: Could not log git info: Attempted to change value of key "git_commit" from d0a66224b695c1d5014df620be635fdb5ce8740a to 9cbce4263ca0eee3d01ddd4017f37716847b1ca5
+If you really want to do this, pass allow_val_change=True to config.update()
+/home/ubuntu/miniconda3/envs/denoiser/lib/python3.10/site-packages/mmcv/__init__.py:20: UserWarning: On January 1, 2023, MMCV will release v2.0.0, in which it will remove components related to the training process and add a data transformation module. In addition, it will rename the package names mmcv to mmcv-lite and mmcv-full to mmcv. See https://github.com/open-mmlab/mmcv/blob/master/docs/en/compatibility.md for more details.
+  warnings.warn(
+The model and loaded state dict do not match exactly
+
+unexpected key in source state_dict: fc.weight, fc.bias
+
+═════════════════════════════════════════════════════════════════
+Component                                   Total    Train   Frozen
+─────────────────────────────────────────────────────────────────
+d3pm                                       96.01M   94.57M    1.44M
+  d3pm.denoise_model                       96.01M   94.57M    1.44M
+    d3pm.denoise_model.time_mlp            131.6K   131.6K        0
+    d3pm.denoise_model.cond_encoder        43.91M   42.48M    1.44M
+    d3pm.denoise_model.input_conv            6.4K     6.4K        0
+    d3pm.denoise_model.encoder_blocks      16.36M   16.36M        0
+    d3pm.denoise_model.encoder_downsamples   774.6K   774.6K        0
+    d3pm.denoise_model.mid_block1           4.98M    4.98M        0
+    d3pm.denoise_model.mid_attn             1.05M    1.05M        0
+    d3pm.denoise_model.mid_cross_attn       1.05M    1.05M        0
+    d3pm.denoise_model.mid_block2           4.98M    4.98M        0
+    d3pm.denoise_model.decoder_blocks      19.47M   19.47M        0
+    d3pm.denoise_model.decoder_upsamples    3.10M    3.10M        0
+    d3pm.denoise_model.decoder_projections   172.5K   172.5K        0
+    d3pm.denoise_model.out_norm               128      128        0
+    d3pm.denoise_model.out_conv              4.6K     4.6K        0
+─────────────────────────────────────────────────────────────────
+TOTAL                                      96.01M   94.57M    1.44M
+═════════════════════════════════════════════════════════════════
+
+OEMCISCRCrossEntropyDataset train: 1751 samples
+OEMCISCRCrossEntropyDataset val: 218 samples
+Training for 30 epochs (26250 iterations, 875 iters/epoch)
+
+Checkpoint: every 1 epoch(s)
+Evaluation: every 1 epoch(s)
+Logging: every 50 iterations
+
+Starting training from epoch 1...
+Model: DiffusionDenoiserModel, cond: hybrid, noise: uniform
+[Epoch 1 | Iter 50/26250 (0.2%)] loss_ce: 2.0023 | loss_kl: 0.0730 | loss_total: 0.2733 | lr: 5.00e-07
+[Epoch 1 | Iter 100/26250 (0.4%)] loss_ce: 1.9685 | loss_kl: 0.2532 | loss_total: 0.4500 | lr: 1.00e-06
+[Epoch 1 | Iter 150/26250 (0.6%)] loss_ce: 2.0561 | loss_kl: 0.0283 | loss_total: 0.2339 | lr: 1.50e-06
+[Epoch 1 | Iter 200/26250 (0.8%)] loss_ce: 1.9712 | loss_kl: 0.0289 | loss_total: 0.2260 | lr: 2.00e-06
+[Epoch 1 | Iter 250/26250 (1.0%)] loss_ce: 1.8648 | loss_kl: 0.0192 | loss_total: 0.2057 | lr: 2.50e-06
+[Epoch 1 | Iter 300/26250 (1.1%)] loss_ce: 1.7483 | loss_kl: 0.1101 | loss_total: 0.2849 | lr: 3.00e-06
+[Epoch 1 | Iter 350/26250 (1.3%)] loss_ce: 1.6412 | loss_kl: 0.0181 | loss_total: 0.1822 | lr: 3.50e-06
+[Epoch 1 | Iter 400/26250 (1.5%)] loss_ce: 1.6116 | loss_kl: 0.0331 | loss_total: 0.1943 | lr: 4.00e-06
+[Epoch 1 | Iter 450/26250 (1.7%)] loss_ce: 2.0450 | loss_kl: 0.0030 | loss_total: 0.2075 | lr: 4.50e-06
+[Epoch 1 | Iter 500/26250 (1.9%)] loss_ce: 1.6356 | loss_kl: 0.0660 | loss_total: 0.2296 | lr: 5.00e-06
+[Epoch 1 | Iter 550/26250 (2.1%)] loss_ce: 1.4176 | loss_kl: 0.0808 | loss_total: 0.2226 | lr: 5.50e-06
+[Epoch 1 | Iter 600/26250 (2.3%)] loss_ce: 1.8496 | loss_kl: 0.0048 | loss_total: 0.1898 | lr: 6.00e-06
+[Epoch 1 | Iter 650/26250 (2.5%)] loss_ce: 1.6641 | loss_kl: 0.0011 | loss_total: 0.1675 | lr: 6.50e-06
+[Epoch 1 | Iter 700/26250 (2.7%)] loss_ce: 1.6432 | loss_kl: 0.0309 | loss_total: 0.1952 | lr: 7.00e-06
+[Epoch 1 | Iter 750/26250 (2.9%)] loss_ce: 1.4048 | loss_kl: 0.0824 | loss_total: 0.2229 | lr: 7.50e-06
+[Epoch 1 | Iter 800/26250 (3.0%)] loss_ce: 1.7626 | loss_kl: 0.0341 | loss_total: 0.2104 | lr: 8.00e-06
+[Epoch 1 | Iter 850/26250 (3.2%)] loss_ce: 1.3276 | loss_kl: 0.0139 | loss_total: 0.1467 | lr: 8.50e-06
+Saved checkpoint: work_dirs/d3pm_hybrid_uniform_resnet101_512x512_100k/epoch_1.pth
+
+[Eval @ Epoch 1, Iter 875]
+  Class               Pseudo   Denoised          Δ
+  ---------------------------------------------
+  Bareland            0.0338     0.0033   -0.0305
+  Rangeland           0.4478     0.0621   -0.3857
+  Developed           0.4480     0.0800   -0.3680
+  Road                0.4745     0.0699   -0.4046
+  Tree                0.6276     0.2666   -0.3610
+  Water               0.5668     0.0513   -0.5154
+  Agriculture         0.6203     0.0244   -0.5959
+  Building            0.6801     0.1367   -0.5435
+  ---------------------------------------------
+  mIOU                0.4874     0.0868   -0.4006
+
+=== Epoch 1/30 complete ===
+[Epoch 2 | Iter 900/26250 (3.4%)] loss_ce: 1.2843 | loss_kl: 0.0594 | loss_total: 0.1878 | lr: 9.00e-06
+[Epoch 2 | Iter 950/26250 (3.6%)] loss_ce: 1.8443 | loss_kl: 0.0006 | loss_total: 0.1850 | lr: 9.50e-06
+[Epoch 2 | Iter 1000/26250 (3.8%)] loss_ce: 1.5761 | loss_kl: 0.0365 | loss_total: 0.1941 | lr: 1.00e-05
+[Epoch 2 | Iter 1050/26250 (4.0%)] loss_ce: 1.2349 | loss_kl: 1.6395 | loss_total: 1.7630 | lr: 1.05e-05
+[Epoch 2 | Iter 1100/26250 (4.2%)] loss_ce: 1.5155 | loss_kl: 0.0016 | loss_total: 0.1531 | lr: 1.10e-05
+[Epoch 2 | Iter 1150/26250 (4.4%)] loss_ce: 1.1948 | loss_kl: 0.0235 | loss_total: 0.1430 | lr: 1.15e-05
+[Epoch 2 | Iter 1200/26250 (4.6%)] loss_ce: 1.4067 | loss_kl: 0.3574 | loss_total: 0.4981 | lr: 1.20e-05
+[Epoch 2 | Iter 1250/26250 (4.8%)] loss_ce: 1.2001 | loss_kl: 0.4044 | loss_total: 0.5244 | lr: 1.25e-05
+[Epoch 2 | Iter 1300/26250 (5.0%)] loss_ce: 1.1564 | loss_kl: 0.0337 | loss_total: 0.1493 | lr: 1.30e-05
+[Epoch 2 | Iter 1350/26250 (5.1%)] loss_ce: 1.1153 | loss_kl: 0.2365 | loss_total: 0.3481 | lr: 1.35e-05
+[Epoch 2 | Iter 1400/26250 (5.3%)] loss_ce: 1.4579 | loss_kl: 0.0260 | loss_total: 0.1718 | lr: 1.40e-05
+[Epoch 2 | Iter 1450/26250 (5.5%)] loss_ce: 1.0901 | loss_kl: 0.0374 | loss_total: 0.1464 | lr: 1.45e-05
+[Epoch 2 | Iter 1500/26250 (5.7%)] loss_ce: 1.1234 | loss_kl: 0.1073 | loss_total: 0.2197 | lr: 1.50e-05
+[Epoch 2 | Iter 1550/26250 (5.9%)] loss_ce: 1.2264 | loss_kl: 0.2442 | loss_total: 0.3669 | lr: 1.55e-05
+[Epoch 2 | Iter 1600/26250 (6.1%)] loss_ce: 1.8945 | loss_kl: 0.0002 | loss_total: 0.1897 | lr: 1.60e-05
+[Epoch 2 | Iter 1650/26250 (6.3%)] loss_ce: 1.0047 | loss_kl: 0.0298 | loss_total: 0.1303 | lr: 1.65e-05
+[Epoch 2 | Iter 1700/26250 (6.5%)] loss_ce: 1.0412 | loss_kl: 0.0247 | loss_total: 0.1288 | lr: 1.70e-05
+[Epoch 3 | Iter 1750/26250 (6.7%)] loss_ce: 1.3276 | loss_kl: 0.0016 | loss_total: 0.1343 | lr: 1.75e-05
+Saved checkpoint: work_dirs/d3pm_hybrid_uniform_resnet101_512x512_100k/epoch_2.pth
+
+[Eval @ Epoch 2, Iter 1750]
+  Class               Pseudo   Denoised          Δ
+  ---------------------------------------------
+  Bareland            0.0338     0.0019   -0.0318
+  Rangeland           0.4478     0.1198   -0.3280
+  Developed           0.4480     0.0814   -0.3667
+  Road                0.4745     0.1048   -0.3697
+  Tree                0.6276     0.3579   -0.2697
+  Water               0.5668     0.0694   -0.4974
+  Agriculture         0.6203     0.0359   -0.5844
+  Building            0.6801     0.1913   -0.4889
+  ---------------------------------------------
+  mIOU                0.4874     0.1203   -0.3671
+
+=== Epoch 2/30 complete ===
+[Epoch 3 | Iter 1800/26250 (6.9%)] loss_ce: 0.9159 | loss_kl: 0.0692 | loss_total: 0.1608 | lr: 1.80e-05
+[Epoch 3 | Iter 1850/26250 (7.0%)] loss_ce: 1.1516 | loss_kl: 0.0680 | loss_total: 0.1832 | lr: 1.85e-05
+[Epoch 3 | Iter 1900/26250 (7.2%)] loss_ce: 1.1552 | loss_kl: 0.0063 | loss_total: 0.1218 | lr: 1.90e-05
+[Epoch 3 | Iter 1950/26250 (7.4%)] loss_ce: 1.3574 | loss_kl: 0.0042 | loss_total: 0.1399 | lr: 1.95e-05
+[Epoch 3 | Iter 2000/26250 (7.6%)] loss_ce: 0.9663 | loss_kl: 0.1338 | loss_total: 0.2304 | lr: 2.00e-05
+[Epoch 3 | Iter 2050/26250 (7.8%)] loss_ce: 1.2946 | loss_kl: 0.0012 | loss_total: 0.1307 | lr: 2.05e-05
+[Epoch 3 | Iter 2100/26250 (8.0%)] loss_ce: 0.8763 | loss_kl: 0.0185 | loss_total: 0.1062 | lr: 2.10e-05
+[Epoch 3 | Iter 2150/26250 (8.2%)] loss_ce: 1.2281 | loss_kl: 0.0628 | loss_total: 0.1857 | lr: 2.15e-05
+[Epoch 3 | Iter 2200/26250 (8.4%)] loss_ce: 1.2865 | loss_kl: 0.0033 | loss_total: 0.1319 | lr: 2.20e-05
+[Epoch 3 | Iter 2250/26250 (8.6%)] loss_ce: 0.9961 | loss_kl: 0.0220 | loss_total: 0.1216 | lr: 2.25e-05
+[Epoch 3 | Iter 2300/26250 (8.8%)] loss_ce: 1.2053 | loss_kl: 0.0647 | loss_total: 0.1852 | lr: 2.30e-05
+[Epoch 3 | Iter 2350/26250 (9.0%)] loss_ce: 1.0106 | loss_kl: 0.0969 | loss_total: 0.1979 | lr: 2.35e-05
+[Epoch 3 | Iter 2400/26250 (9.1%)] loss_ce: 1.0018 | loss_kl: 0.0147 | loss_total: 0.1149 | lr: 2.40e-05
+[Epoch 3 | Iter 2450/26250 (9.3%)] loss_ce: 0.7296 | loss_kl: 0.0301 | loss_total: 0.1031 | lr: 2.45e-05
+[Epoch 3 | Iter 2500/26250 (9.5%)] loss_ce: 1.0484 | loss_kl: 0.0917 | loss_total: 0.1965 | lr: 2.50e-05
+[Epoch 3 | Iter 2550/26250 (9.7%)] loss_ce: 0.9159 | loss_kl: 0.0517 | loss_total: 0.1433 | lr: 2.55e-05
+[Epoch 3 | Iter 2600/26250 (9.9%)] loss_ce: 2.4244 | loss_kl: 0.2882 | loss_total: 0.5306 | lr: 2.60e-05
+Saved checkpoint: work_dirs/d3pm_hybrid_uniform_resnet101_512x512_100k/epoch_3.pth
+
+[Eval @ Epoch 3, Iter 2625]
+  Class               Pseudo   Denoised          Δ
+  ---------------------------------------------
+  Bareland            0.0338     0.0010   -0.0328
+  Rangeland           0.4478     0.1884   -0.2594
+  Developed           0.4480     0.0868   -0.3613
+  Road                0.4745     0.1585   -0.3159
+  Tree                0.6276     0.4221   -0.2055
+  Water               0.5668     0.1070   -0.4598
+  Agriculture         0.6203     0.0765   -0.5438
+  Building            0.6801     0.2850   -0.3951
+  ---------------------------------------------
+  mIOU                0.4874     0.1657   -0.3217
+
+=== Epoch 3/30 complete ===
+[Epoch 4 | Iter 2650/26250 (10.1%)] loss_ce: 1.0987 | loss_kl: 0.0901 | loss_total: 0.1999 | lr: 2.65e-05
+[Epoch 4 | Iter 2700/26250 (10.3%)] loss_ce: 0.8926 | loss_kl: 0.0077 | loss_total: 0.0970 | lr: 2.70e-05
+[Epoch 4 | Iter 2750/26250 (10.5%)] loss_ce: 1.1358 | loss_kl: 0.1348 | loss_total: 0.2484 | lr: 2.75e-05
+[Epoch 4 | Iter 2800/26250 (10.7%)] loss_ce: 1.0851 | loss_kl: 0.0273 | loss_total: 0.1358 | lr: 2.80e-05
+[Epoch 4 | Iter 2850/26250 (10.9%)] loss_ce: 1.0161 | loss_kl: 0.0283 | loss_total: 0.1299 | lr: 2.85e-05
+[Epoch 4 | Iter 2900/26250 (11.0%)] loss_ce: 0.9036 | loss_kl: 0.0296 | loss_total: 0.1199 | lr: 2.90e-05
+[Epoch 4 | Iter 2950/26250 (11.2%)] loss_ce: 1.0400 | loss_kl: 0.0357 | loss_total: 0.1397 | lr: 2.95e-05
+[Epoch 4 | Iter 3000/26250 (11.4%)] loss_ce: 0.8382 | loss_kl: 0.0075 | loss_total: 0.0914 | lr: 3.00e-05
+[Epoch 4 | Iter 3050/26250 (11.6%)] loss_ce: 1.4880 | loss_kl: 0.2816 | loss_total: 0.4304 | lr: 3.05e-05
+[Epoch 4 | Iter 3100/26250 (11.8%)] loss_ce: 2.2265 | loss_kl: 0.0006 | loss_total: 0.2232 | lr: 3.10e-05
+[Epoch 4 | Iter 3150/26250 (12.0%)] loss_ce: 1.5477 | loss_kl: 0.0174 | loss_total: 0.1721 | lr: 3.15e-05
+[Epoch 4 | Iter 3200/26250 (12.2%)] loss_ce: 1.9894 | loss_kl: 0.9806 | loss_total: 1.1796 | lr: 3.20e-05
+[Epoch 4 | Iter 3250/26250 (12.4%)] loss_ce: 1.2274 | loss_kl: 0.0126 | loss_total: 0.1353 | lr: 3.25e-05
+[Epoch 4 | Iter 3300/26250 (12.6%)] loss_ce: 1.1634 | loss_kl: 0.0283 | loss_total: 0.1446 | lr: 3.30e-05
+[Epoch 4 | Iter 3350/26250 (12.8%)] loss_ce: 1.1422 | loss_kl: 0.1945 | loss_total: 0.3087 | lr: 3.35e-05
+[Epoch 4 | Iter 3400/26250 (13.0%)] loss_ce: 0.7881 | loss_kl: 0.0645 | loss_total: 0.1433 | lr: 3.40e-05
+[Epoch 4 | Iter 3450/26250 (13.1%)] loss_ce: 0.9318 | loss_kl: 0.0205 | loss_total: 0.1137 | lr: 3.45e-05
+[Epoch 5 | Iter 3500/26250 (13.3%)] loss_ce: 2.1280 | loss_kl: 0.0241 | loss_total: 0.2369 | lr: 3.50e-05
+Saved checkpoint: work_dirs/d3pm_hybrid_uniform_resnet101_512x512_100k/epoch_4.pth
+
+[Eval @ Epoch 4, Iter 3500]
+  Class               Pseudo   Denoised          Δ
+  ---------------------------------------------
+  Bareland            0.0338     0.0005   -0.0332
+  Rangeland           0.4478     0.2392   -0.2086
+  Developed           0.4480     0.1040   -0.3441
+  Road                0.4745     0.2110   -0.2635
+  Tree                0.6276     0.4602   -0.1674
+  Water               0.5668     0.1464   -0.4204
+  Agriculture         0.6203     0.2032   -0.4171
+  Building            0.6801     0.3975   -0.2827
+  ---------------------------------------------
+  mIOU                0.4874     0.2202   -0.2671
+
+=== Epoch 4/30 complete ===
+[Epoch 5 | Iter 3550/26250 (13.5%)] loss_ce: 1.6058 | loss_kl: 0.0020 | loss_total: 0.1626 | lr: 3.55e-05
+[Epoch 5 | Iter 3600/26250 (13.7%)] loss_ce: 0.8370 | loss_kl: 0.0316 | loss_total: 0.1153 | lr: 3.60e-05
+[Epoch 5 | Iter 3650/26250 (13.9%)] loss_ce: 1.0585 | loss_kl: 0.0438 | loss_total: 0.1497 | lr: 3.65e-05
+[Epoch 5 | Iter 3700/26250 (14.1%)] loss_ce: 1.2838 | loss_kl: 0.0389 | loss_total: 0.1673 | lr: 3.70e-05
+[Epoch 5 | Iter 3750/26250 (14.3%)] loss_ce: 0.7246 | loss_kl: 0.0197 | loss_total: 0.0922 | lr: 3.75e-05
+[Epoch 5 | Iter 3800/26250 (14.5%)] loss_ce: 0.9472 | loss_kl: 0.0936 | loss_total: 0.1883 | lr: 3.80e-05
+[Epoch 5 | Iter 3850/26250 (14.7%)] loss_ce: 0.9722 | loss_kl: 0.0220 | loss_total: 0.1192 | lr: 3.85e-05
+[Epoch 5 | Iter 3900/26250 (14.9%)] loss_ce: 1.0241 | loss_kl: 0.1151 | loss_total: 0.2176 | lr: 3.90e-05
+[Epoch 5 | Iter 3950/26250 (15.0%)] loss_ce: 1.6814 | loss_kl: 0.0008 | loss_total: 0.1690 | lr: 3.95e-05
+[Epoch 5 | Iter 4000/26250 (15.2%)] loss_ce: 0.9232 | loss_kl: 0.0634 | loss_total: 0.1557 | lr: 4.00e-05
+[Epoch 5 | Iter 4050/26250 (15.4%)] loss_ce: 1.3090 | loss_kl: 0.0029 | loss_total: 0.1338 | lr: 4.05e-05
+[Epoch 5 | Iter 4100/26250 (15.6%)] loss_ce: 1.0506 | loss_kl: 0.0605 | loss_total: 0.1656 | lr: 4.10e-05
+[Epoch 5 | Iter 4150/26250 (15.8%)] loss_ce: 1.2222 | loss_kl: 0.0413 | loss_total: 0.1635 | lr: 4.15e-05
+[Epoch 5 | Iter 4200/26250 (16.0%)] loss_ce: 0.8626 | loss_kl: 0.0046 | loss_total: 0.0908 | lr: 4.20e-05
+[Epoch 5 | Iter 4250/26250 (16.2%)] loss_ce: 1.5385 | loss_kl: 0.2011 | loss_total: 0.3550 | lr: 4.25e-05
+[Epoch 5 | Iter 4300/26250 (16.4%)] loss_ce: 0.7802 | loss_kl: 0.0657 | loss_total: 0.1437 | lr: 4.30e-05
+[Epoch 5 | Iter 4350/26250 (16.6%)] loss_ce: 0.9420 | loss_kl: 0.0138 | loss_total: 0.1080 | lr: 4.35e-05
+Saved checkpoint: work_dirs/d3pm_hybrid_uniform_resnet101_512x512_100k/epoch_5.pth
+
+[Eval @ Epoch 5, Iter 4375]
+  Class               Pseudo   Denoised          Δ
+  ---------------------------------------------
+  Bareland            0.0338     0.0004   -0.0334
+  Rangeland           0.4478     0.2766   -0.1713
+  Developed           0.4480     0.1194   -0.3286
+  Road                0.4745     0.2467   -0.2278
+  Tree                0.6276     0.4837   -0.1438
+  Water               0.5668     0.2556   -0.3112
+  Agriculture         0.6203     0.3340   -0.2863
+  Building            0.6801     0.4560   -0.2241
+  ---------------------------------------------
+  mIOU                0.4874     0.2715   -0.2158
+
+=== Epoch 5/30 complete ===
+[Epoch 6 | Iter 4400/26250 (16.8%)] loss_ce: 1.0740 | loss_kl: 0.0032 | loss_total: 0.1106 | lr: 4.40e-05
+[Epoch 6 | Iter 4450/26250 (17.0%)] loss_ce: 1.1019 | loss_kl: 0.0583 | loss_total: 0.1684 | lr: 4.45e-05
+[Epoch 6 | Iter 4500/26250 (17.1%)] loss_ce: 0.9201 | loss_kl: 0.0014 | loss_total: 0.0934 | lr: 4.50e-05
+[Epoch 6 | Iter 4550/26250 (17.3%)] loss_ce: 1.4491 | loss_kl: 0.1728 | loss_total: 0.3177 | lr: 4.55e-05
+[Epoch 6 | Iter 4600/26250 (17.5%)] loss_ce: 0.9238 | loss_kl: 0.0788 | loss_total: 0.1711 | lr: 4.60e-05
+[Epoch 6 | Iter 4650/26250 (17.7%)] loss_ce: 1.2471 | loss_kl: 0.0692 | loss_total: 0.1939 | lr: 4.65e-05
+[Epoch 6 | Iter 4700/26250 (17.9%)] loss_ce: 1.7358 | loss_kl: 0.2307 | loss_total: 0.4043 | lr: 4.70e-05
+[Epoch 6 | Iter 4750/26250 (18.1%)] loss_ce: 1.1613 | loss_kl: 0.0007 | loss_total: 0.1168 | lr: 4.75e-05
+[Epoch 6 | Iter 4800/26250 (18.3%)] loss_ce: 1.2388 | loss_kl: 0.1964 | loss_total: 0.3203 | lr: 4.80e-05
+[Epoch 6 | Iter 4850/26250 (18.5%)] loss_ce: 0.6695 | loss_kl: 0.0107 | loss_total: 0.0777 | lr: 4.85e-05
+[Epoch 6 | Iter 4900/26250 (18.7%)] loss_ce: 1.4059 | loss_kl: 0.1236 | loss_total: 0.2642 | lr: 4.90e-05
+[Epoch 6 | Iter 4950/26250 (18.9%)] loss_ce: 1.8853 | loss_kl: 0.5670 | loss_total: 0.7556 | lr: 4.95e-05
+[Epoch 6 | Iter 5000/26250 (19.0%)] loss_ce: 1.9050 | loss_kl: 1.2551 | loss_total: 1.4456 | lr: 5.00e-05
+[Epoch 6 | Iter 5050/26250 (19.2%)] loss_ce: 0.9758 | loss_kl: 0.1004 | loss_total: 0.1980 | lr: 5.00e-05
+[Epoch 6 | Iter 5100/26250 (19.4%)] loss_ce: 1.0970 | loss_kl: 0.0529 | loss_total: 0.1626 | lr: 5.00e-05
+[Epoch 6 | Iter 5150/26250 (19.6%)] loss_ce: 1.6888 | loss_kl: 0.3038 | loss_total: 0.4727 | lr: 5.00e-05
+[Epoch 6 | Iter 5200/26250 (19.8%)] loss_ce: 1.1163 | loss_kl: 0.0105 | loss_total: 0.1221 | lr: 5.00e-05
+[Epoch 7 | Iter 5250/26250 (20.0%)] loss_ce: 1.1440 | loss_kl: 0.0710 | loss_total: 0.1854 | lr: 5.00e-05
+Saved checkpoint: work_dirs/d3pm_hybrid_uniform_resnet101_512x512_100k/epoch_6.pth
+
+[Eval @ Epoch 6, Iter 5250]
+  Class               Pseudo   Denoised          Δ
+  ---------------------------------------------
+  Bareland            0.0338     0.0003   -0.0334
+  Rangeland           0.4478     0.2937   -0.1542
+  Developed           0.4480     0.1387   -0.3093
+  Road                0.4745     0.2656   -0.2089
+  Tree                0.6276     0.4919   -0.1357
+  Water               0.5668     0.3367   -0.2301
+  Agriculture         0.6203     0.3815   -0.2388
+  Building            0.6801     0.4949   -0.1852
+  ---------------------------------------------
+  mIOU                0.4874     0.3004   -0.1870
+
+=== Epoch 6/30 complete ===
+[Epoch 7 | Iter 5300/26250 (20.2%)] loss_ce: 1.0674 | loss_kl: 0.0019 | loss_total: 0.1087 | lr: 5.00e-05
+[Epoch 7 | Iter 5350/26250 (20.4%)] loss_ce: 1.0978 | loss_kl: 0.0011 | loss_total: 0.1109 | lr: 5.00e-05
+[Epoch 7 | Iter 5400/26250 (20.6%)] loss_ce: 0.9775 | loss_kl: 0.0111 | loss_total: 0.1088 | lr: 5.00e-05
+[Epoch 7 | Iter 5450/26250 (20.8%)] loss_ce: 1.1163 | loss_kl: 0.0205 | loss_total: 0.1321 | lr: 4.99e-05
+[Epoch 7 | Iter 5500/26250 (21.0%)] loss_ce: 1.9492 | loss_kl: 0.2407 | loss_total: 0.4356 | lr: 4.99e-05
+[Epoch 7 | Iter 5550/26250 (21.1%)] loss_ce: 1.1754 | loss_kl: 0.0383 | loss_total: 0.1558 | lr: 4.99e-05
+[Epoch 7 | Iter 5600/26250 (21.3%)] loss_ce: 0.8478 | loss_kl: 0.0053 | loss_total: 0.0901 | lr: 4.99e-05
+[Epoch 7 | Iter 5650/26250 (21.5%)] loss_ce: 0.7574 | loss_kl: 0.0860 | loss_total: 0.1617 | lr: 4.99e-05
+[Epoch 7 | Iter 5700/26250 (21.7%)] loss_ce: 1.1805 | loss_kl: 0.3691 | loss_total: 0.4871 | lr: 4.99e-05
+[Epoch 7 | Iter 5750/26250 (21.9%)] loss_ce: 0.9495 | loss_kl: 0.0010 | loss_total: 0.0959 | lr: 4.98e-05
+[Epoch 7 | Iter 5800/26250 (22.1%)] loss_ce: 0.9311 | loss_kl: 0.0241 | loss_total: 0.1172 | lr: 4.98e-05
+[Epoch 7 | Iter 5850/26250 (22.3%)] loss_ce: 0.8409 | loss_kl: 0.0440 | loss_total: 0.1281 | lr: 4.98e-05
+[Epoch 7 | Iter 5900/26250 (22.5%)] loss_ce: 0.6334 | loss_kl: 0.0151 | loss_total: 0.0784 | lr: 4.98e-05
+[Epoch 7 | Iter 5950/26250 (22.7%)] loss_ce: 1.3900 | loss_kl: 0.0658 | loss_total: 0.2048 | lr: 4.98e-05
+[Epoch 7 | Iter 6000/26250 (22.9%)] loss_ce: 0.9633 | loss_kl: 0.0711 | loss_total: 0.1675 | lr: 4.97e-05
+[Epoch 7 | Iter 6050/26250 (23.0%)] loss_ce: 2.1102 | loss_kl: 0.0490 | loss_total: 0.2600 | lr: 4.97e-05
+[Epoch 7 | Iter 6100/26250 (23.2%)] loss_ce: 0.9754 | loss_kl: 0.0004 | loss_total: 0.0980 | lr: 4.97e-05
+Saved checkpoint: work_dirs/d3pm_hybrid_uniform_resnet101_512x512_100k/epoch_7.pth
+
+[Eval @ Epoch 7, Iter 6125]
+  Class               Pseudo   Denoised          Δ
+  ---------------------------------------------
+  Bareland            0.0338     0.0007   -0.0330
+  Rangeland           0.4478     0.2922   -0.1557
+  Developed           0.4480     0.1509   -0.2971
+  Road                0.4745     0.2629   -0.2116
+  Tree                0.6276     0.4858   -0.1418
+  Water               0.5668     0.3431   -0.2236
+  Agriculture         0.6203     0.3947   -0.2256
+  Building            0.6801     0.5122   -0.1679
+  ---------------------------------------------
+  mIOU                0.4874     0.3053   -0.1820
+
+=== Epoch 7/30 complete ===
+[Epoch 8 | Iter 6150/26250 (23.4%)] loss_ce: 0.9522 | loss_kl: 0.0396 | loss_total: 0.1349 | lr: 4.96e-05
+[Epoch 8 | Iter 6200/26250 (23.6%)] loss_ce: 1.0162 | loss_kl: 0.0047 | loss_total: 0.1063 | lr: 4.96e-05
+[Epoch 8 | Iter 6250/26250 (23.8%)] loss_ce: 1.0790 | loss_kl: 0.0116 | loss_total: 0.1195 | lr: 4.96e-05
+[Epoch 8 | Iter 6300/26250 (24.0%)] loss_ce: 1.8193 | loss_kl: 0.2271 | loss_total: 0.4090 | lr: 4.95e-05
+[Epoch 8 | Iter 6350/26250 (24.2%)] loss_ce: 0.7293 | loss_kl: 0.0174 | loss_total: 0.0903 | lr: 4.95e-05
+[Epoch 8 | Iter 6400/26250 (24.4%)] loss_ce: 0.8136 | loss_kl: 0.0330 | loss_total: 0.1144 | lr: 4.95e-05
+[Epoch 8 | Iter 6450/26250 (24.6%)] loss_ce: 1.3845 | loss_kl: 0.3013 | loss_total: 0.4398 | lr: 4.94e-05
+[Epoch 8 | Iter 6500/26250 (24.8%)] loss_ce: 1.0968 | loss_kl: 0.0019 | loss_total: 0.1116 | lr: 4.94e-05
+[Epoch 8 | Iter 6550/26250 (25.0%)] loss_ce: 0.5688 | loss_kl: 0.0179 | loss_total: 0.0748 | lr: 4.94e-05
+[Epoch 8 | Iter 6600/26250 (25.1%)] loss_ce: 0.7362 | loss_kl: 0.0239 | loss_total: 0.0975 | lr: 4.93e-05
+[Epoch 8 | Iter 6650/26250 (25.3%)] loss_ce: 0.7881 | loss_kl: 0.0186 | loss_total: 0.0974 | lr: 4.93e-05
+[Epoch 8 | Iter 6700/26250 (25.5%)] loss_ce: 0.9942 | loss_kl: 0.0374 | loss_total: 0.1368 | lr: 4.92e-05
+[Epoch 8 | Iter 6750/26250 (25.7%)] loss_ce: 1.2357 | loss_kl: 0.0891 | loss_total: 0.2126 | lr: 4.92e-05
+[Epoch 8 | Iter 6800/26250 (25.9%)] loss_ce: 0.9700 | loss_kl: 0.0259 | loss_total: 0.1229 | lr: 4.91e-05
+[Epoch 8 | Iter 6850/26250 (26.1%)] loss_ce: 0.7137 | loss_kl: 0.0606 | loss_total: 0.1320 | lr: 4.91e-05
+[Epoch 8 | Iter 6900/26250 (26.3%)] loss_ce: 1.2227 | loss_kl: 0.0481 | loss_total: 0.1703 | lr: 4.90e-05
+[Epoch 8 | Iter 6950/26250 (26.5%)] loss_ce: 1.1738 | loss_kl: 0.0208 | loss_total: 0.1382 | lr: 4.90e-05
+[Epoch 9 | Iter 7000/26250 (26.7%)] loss_ce: 0.8341 | loss_kl: 0.0040 | loss_total: 0.0874 | lr: 4.89e-05
+Saved checkpoint: work_dirs/d3pm_hybrid_uniform_resnet101_512x512_100k/epoch_8.pth
+
+[Eval @ Epoch 8, Iter 7000]
+  Class               Pseudo   Denoised          Δ
+  ---------------------------------------------
+  Bareland            0.0338     0.0056   -0.0281
+  Rangeland           0.4478     0.2741   -0.1738
+  Developed           0.4480     0.1527   -0.2953
+  Road                0.4745     0.2550   -0.2195
+  Tree                0.6276     0.4669   -0.1607
+  Water               0.5668     0.4038   -0.1629
+  Agriculture         0.6203     0.3829   -0.2374
+  Building            0.6801     0.5185   -0.1616
+  ---------------------------------------------
+  mIOU                0.4874     0.3074   -0.1799
+
+=== Epoch 8/30 complete ===
+[Epoch 9 | Iter 7050/26250 (26.9%)] loss_ce: 1.0883 | loss_kl: 0.0356 | loss_total: 0.1444 | lr: 4.89e-05
+[Epoch 9 | Iter 7100/26250 (27.0%)] loss_ce: 0.8299 | loss_kl: 0.0060 | loss_total: 0.0890 | lr: 4.88e-05
+[Epoch 9 | Iter 7150/26250 (27.2%)] loss_ce: 0.7855 | loss_kl: 0.0137 | loss_total: 0.0922 | lr: 4.88e-05
+[Epoch 9 | Iter 7200/26250 (27.4%)] loss_ce: 0.6758 | loss_kl: 0.0486 | loss_total: 0.1162 | lr: 4.87e-05
+[Epoch 9 | Iter 7250/26250 (27.6%)] loss_ce: 0.8785 | loss_kl: 0.0123 | loss_total: 0.1001 | lr: 4.87e-05
+[Epoch 9 | Iter 7300/26250 (27.8%)] loss_ce: 0.9890 | loss_kl: 0.0115 | loss_total: 0.1104 | lr: 4.86e-05
+[Epoch 9 | Iter 7350/26250 (28.0%)] loss_ce: 0.9504 | loss_kl: 0.0604 | loss_total: 0.1554 | lr: 4.85e-05
+[Epoch 9 | Iter 7400/26250 (28.2%)] loss_ce: 1.1030 | loss_kl: 0.1495 | loss_total: 0.2598 | lr: 4.85e-05
+[Epoch 9 | Iter 7450/26250 (28.4%)] loss_ce: 1.3956 | loss_kl: 0.1550 | loss_total: 0.2946 | lr: 4.84e-05
+[Epoch 9 | Iter 7500/26250 (28.6%)] loss_ce: 1.1881 | loss_kl: 0.1067 | loss_total: 0.2255 | lr: 4.83e-05
+[Epoch 9 | Iter 7550/26250 (28.8%)] loss_ce: 0.7937 | loss_kl: 0.0132 | loss_total: 0.0926 | lr: 4.83e-05
+[Epoch 9 | Iter 7600/26250 (29.0%)] loss_ce: 0.9758 | loss_kl: 0.0086 | loss_total: 0.1062 | lr: 4.82e-05
+[Epoch 9 | Iter 7650/26250 (29.1%)] loss_ce: 0.7014 | loss_kl: 0.0430 | loss_total: 0.1131 | lr: 4.81e-05
+[Epoch 9 | Iter 7700/26250 (29.3%)] loss_ce: 1.1019 | loss_kl: 0.0940 | loss_total: 0.2042 | lr: 4.81e-05
+[Epoch 9 | Iter 7750/26250 (29.5%)] loss_ce: 0.8902 | loss_kl: 0.0183 | loss_total: 0.1073 | lr: 4.80e-05
+[Epoch 9 | Iter 7800/26250 (29.7%)] loss_ce: 1.1257 | loss_kl: 0.0092 | loss_total: 0.1217 | lr: 4.79e-05
+[Epoch 9 | Iter 7850/26250 (29.9%)] loss_ce: 1.0331 | loss_kl: 0.0131 | loss_total: 0.1164 | lr: 4.79e-05
+Saved checkpoint: work_dirs/d3pm_hybrid_uniform_resnet101_512x512_100k/epoch_9.pth
+
+[Eval @ Epoch 9, Iter 7875]
+  Class               Pseudo   Denoised          Δ
+  ---------------------------------------------
+  Bareland            0.0338     0.0374 +   0.0037
+  Rangeland           0.4478     0.2549   -0.1929
+  Developed           0.4480     0.1541   -0.2939
+  Road                0.4745     0.2377   -0.2368
+  Tree                0.6276     0.4382   -0.1894
+  Water               0.5668     0.4297   -0.1371
+  Agriculture         0.6203     0.3678   -0.2525
+  Building            0.6801     0.5126   -0.1676
+  ---------------------------------------------
+  mIOU                0.4874     0.3041   -0.1833
+
+=== Epoch 9/30 complete ===
+[Epoch 10 | Iter 7900/26250 (30.1%)] loss_ce: 1.1884 | loss_kl: 0.2573 | loss_total: 0.3761 | lr: 4.78e-05
+[Epoch 10 | Iter 7950/26250 (30.3%)] loss_ce: 0.6344 | loss_kl: 0.0331 | loss_total: 0.0965 | lr: 4.77e-05
+[Epoch 10 | Iter 8000/26250 (30.5%)] loss_ce: 0.6986 | loss_kl: 0.0192 | loss_total: 0.0891 | lr: 4.76e-05
+[Epoch 10 | Iter 8050/26250 (30.7%)] loss_ce: 0.7462 | loss_kl: 0.0009 | loss_total: 0.0755 | lr: 4.76e-05
+[Epoch 10 | Iter 8100/26250 (30.9%)] loss_ce: 1.3215 | loss_kl: 0.1184 | loss_total: 0.2505 | lr: 4.75e-05
+[Epoch 10 | Iter 8150/26250 (31.0%)] loss_ce: 1.6319 | loss_kl: 0.1935 | loss_total: 0.3567 | lr: 4.74e-05
+[Epoch 10 | Iter 8200/26250 (31.2%)] loss_ce: 0.8243 | loss_kl: 0.0080 | loss_total: 0.0905 | lr: 4.73e-05
+[Epoch 10 | Iter 8250/26250 (31.4%)] loss_ce: 0.8507 | loss_kl: 0.0578 | loss_total: 0.1429 | lr: 4.72e-05
+[Epoch 10 | Iter 8300/26250 (31.6%)] loss_ce: 1.1900 | loss_kl: 0.0108 | loss_total: 0.1298 | lr: 4.71e-05
+[Epoch 10 | Iter 8350/26250 (31.8%)] loss_ce: 1.2440 | loss_kl: 0.0529 | loss_total: 0.1773 | lr: 4.71e-05
+[Epoch 10 | Iter 8400/26250 (32.0%)] loss_ce: 0.8877 | loss_kl: 0.0015 | loss_total: 0.0903 | lr: 4.70e-05
+[Epoch 10 | Iter 8450/26250 (32.2%)] loss_ce: 0.9328 | loss_kl: 0.0961 | loss_total: 0.1893 | lr: 4.69e-05
+[Epoch 10 | Iter 8500/26250 (32.4%)] loss_ce: 1.3185 | loss_kl: 0.1017 | loss_total: 0.2336 | lr: 4.68e-05
+[Epoch 10 | Iter 8550/26250 (32.6%)] loss_ce: 0.6965 | loss_kl: 0.0314 | loss_total: 0.1011 | lr: 4.67e-05
+[Epoch 10 | Iter 8600/26250 (32.8%)] loss_ce: 1.0363 | loss_kl: 0.1436 | loss_total: 0.2473 | lr: 4.66e-05
+[Epoch 10 | Iter 8650/26250 (33.0%)] loss_ce: 1.1454 | loss_kl: 0.1622 | loss_total: 0.2767 | lr: 4.65e-05
+[Epoch 10 | Iter 8700/26250 (33.1%)] loss_ce: 0.7691 | loss_kl: 0.0062 | loss_total: 0.0831 | lr: 4.64e-05
+[Epoch 11 | Iter 8750/26250 (33.3%)] loss_ce: 1.2149 | loss_kl: 0.1120 | loss_total: 0.2335 | lr: 4.63e-05
+
+Traceback (most recent call last):
+  File "/home/ubuntu/miniconda3/envs/denoiser/lib/python3.10/site-packages/torch/serialization.py", line 977, in save
+    _save(
+  File "/home/ubuntu/miniconda3/envs/denoiser/lib/python3.10/site-packages/torch/serialization.py", line 1286, in _save
+    zip_file.write_record(name, storage, num_bytes)
+RuntimeError: basic_ios::clear: iostream error
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/vuong_denoiser/PseudoDenoiserDiffusion/tools/train.py", line 620, in <module>
+    main()
+  File "/home/ubuntu/vuong_denoiser/PseudoDenoiserDiffusion/tools/train.py", line 512, in main
+    torch.save(save_dict, ckpt_path)
+  File "/home/ubuntu/miniconda3/envs/denoiser/lib/python3.10/site-packages/torch/serialization.py", line 976, in save
+    with _open_zipfile_writer(f) as opened_zipfile:
+  File "/home/ubuntu/miniconda3/envs/denoiser/lib/python3.10/site-packages/torch/serialization.py", line 808, in __exit__
+    self.file_like.write_end_of_file()
+RuntimeError: [enforce fail at inline_container.cc:668] . unexpected pos 1213891968 vs 1213891856
